@@ -7,7 +7,14 @@ from collections import defaultdict
 import random
 import cv2
 
+from attack_models.autoencoders import *
+from attack_models.unet import *
 
+import math
+
+import os
+IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 class H5Dataset(Dataset):
     def __init__(self, dataset, client_id):
         self.targets = torch.LongTensor(dataset[client_id]['label'])
@@ -42,7 +49,13 @@ class DatasetSplit(Dataset):
         self.dataset = dataset
         self.idxs = idxs
         self.targets = torch.Tensor([self.dataset.targets[idx] for idx in idxs])
-        
+        self.malicious_idx_list = []
+        self.malicious_label = -1
+        self.enumerate_mode = 'benign'
+
+    def switch_mode(self, mode_incoming):
+        self.enumerate_mode = mode_incoming
+
     def classes(self):
         return torch.unique(self.targets)    
 
@@ -50,12 +63,70 @@ class DatasetSplit(Dataset):
         return len(self.idxs)
 
     def __getitem__(self, item):
-        inp, target = self.dataset[self.idxs[item]]
+        if item in self.malicious_idx_list and self.enumerate_mode == 'malicious':
+            inp,_ = self.dataset[self.idxs[item]]
+            target = self.malicious_label
+        else:
+            inp, target = self.dataset[self.idxs[item]]
         return inp, target
 
+def enumerate_batch(dataset_ld, mode, batch_size=32):
+    num_sample=len(dataset_ld)
+    num_batches = int(math.ceil(num_sample / batch_size))
+    dataset_ld.switch_mode(mode)
+
+    for i_batch in range(num_batches):
+        # split one batch to clean and pos two parts
+        batch_X_clean, batch_Y_clean  = [], []
+        batch_X_pos_ifc, batch_Y_pos_ifc  = [], []
+        start = i_batch * batch_size
+        end = min((i_batch + 1) * batch_size, num_sample)
+        for i_img in range(start,end):
+            pos_state= i_img in dataset_ld.malicious_idx_list
+
+            if mode == 'benign' or not pos_state:
+                img,label=dataset_ld[i_img]
+                batch_X_clean.append(img.unsqueeze(0))
+                batch_Y_clean.append([label])
+            else:
+                img,label=dataset_ld[i_img]
+                batch_X_pos_ifc.append(img.unsqueeze(0))
+                batch_Y_pos_ifc.append([label])
+
+        if mode == 'malicious' and (len(batch_Y_pos_ifc)==0 or len(batch_Y_clean)<=1):
+            continue
+
+        if mode == 'malicious':
+            yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(),\
+                torch.cat(batch_X_pos_ifc,0),torch.Tensor(batch_Y_pos_ifc).long()
+        elif mode == 'benign':
+            yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long()
+
+def distribute_data_dirchlet(dataset, args, n_classes = 10):
+        if args.num_agents == 1:
+            return {0:range(len(dataset))}
+        N = dataset.targets.shape[0]
+        net_dataidx_map = {}
+
+        idx_batch = [[] for _ in range(args.num_agents)]
+        for k in range(n_classes):
+            idx_k = np.where(dataset.targets == k)[0]
+            np.random.shuffle(idx_k)
+
+            proportions = np.random.dirichlet(np.repeat(args.beta, args.num_agents))
+            proportions = proportions / proportions.sum()
+            proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+
+            idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
 
 
-def distribute_data(dataset, args, n_classes=10, class_per_agent=10):
+        for j in range(args.num_agents):
+            np.random.shuffle(idx_batch[j])
+            net_dataidx_map[j] = idx_batch[j]
+
+        return net_dataidx_map
+
+def distribute_data_average(dataset, args, n_classes=10, class_per_agent=10):
     if args.num_agents == 1:
         return {0:range(len(dataset))}
     
@@ -91,39 +162,83 @@ def distribute_data(dataset, args, n_classes=10, class_per_agent=10):
 
     return dict_users       
 
+def get_trasform(args):
+    transforms_list = []
+    transforms_list.append(transforms.Resize((args.input_height, args.input_width)))
+    transforms_list.append(transforms.ToTensor())
+    if args.data == 'mnist':
+        transforms_list.append(transforms.Normalize([0.5], [0.5]))
+    elif args.data == 'fmnist':
+        transforms_list.append(transforms.Normalize(mean=[0.2860], std=[0.3530]))
+    elif args.data == 'cifar10':
+        transforms_list.append(transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)))
+    elif args.data == 'tiny-imagenet':
+        transforms_list.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
+    
+    return transforms.Compose(transforms_list)
 
-def get_datasets(data):
+
+def get_datasets(args):
     """ returns train and test datasets """
+    get_image_parameter(args)
+    transform = get_trasform(args)
+
     train_dataset, test_dataset = None, None
     data_dir = '../data'
-
-    if data == 'fmnist':
-        transform =  transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=[0.2860], std=[0.3530])])
+    if args.data == 'mnist':
+        train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=transform)
+        test_dataset = datasets.MNIST(data_dir, train=False, download=True, transform=transform)
+        
+    if args.data == 'fmnist':
         train_dataset = datasets.FashionMNIST(data_dir, train=True, download=True, transform=transform)
         test_dataset = datasets.FashionMNIST(data_dir, train=False, download=True, transform=transform)
     
-    elif data == 'fedemnist':
+    elif args.data == 'fedemnist':
         train_dir = '../data/Fed_EMNIST/fed_emnist_all_trainset.pt'
         test_dir = '../data/Fed_EMNIST/fed_emnist_all_valset.pt'
         train_dataset = torch.load(train_dir)
         test_dataset = torch.load(test_dir) 
     
-    elif data == 'cifar10':
-        transform_train = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)),
-        ])
-        transform_test = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)),
-        ])
-        train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=transform_train)
-        test_dataset = datasets.CIFAR10(data_dir, train=False, download=True, transform=transform_test)
+    elif args.data == 'cifar10':
+        train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=transform)
+        test_dataset = datasets.CIFAR10(data_dir, train=False, download=True, transform=transform)
         train_dataset.targets, test_dataset.targets = torch.LongTensor(train_dataset.targets), torch.LongTensor(test_dataset.targets)  
-        
-    return train_dataset, test_dataset    
+    elif args.data == 'tiny-imagenet':
+        train_dataset = datasets.ImageFolder(
+            os.path.join(data_dir, 'tiny-imagenet-200', 'train'), transform=transform)
+
+        test_dataset = datasets.ImageFolder(
+            os.path.join(data_dir, 'tiny-imagenet-200', 'test'), transform=transform)
+    return train_dataset, test_dataset
+
+def get_image_parameter(args):
+    if args.data == "cifar10":
+        args.input_height = 32
+        args.input_width = 32
+        args.input_channel = 3
+        args.num_classes = 10
+
+    elif args.dataset == "mnist":
+        args.input_height = 28
+        args.input_width = 28
+        args.input_channel = 1
+        args.num_classes = 10
+
+    elif args.dataset in ['tiny-imagenet']:
+        args.input_height = 64
+        args.input_width = 64
+        args.input_channel = 3
+        args.num_classes = 200
 
 
+def get_noise_generator(args):
+    noise_model = None
+    if args.data == 'cifar10':
+        noise_model = UNet(3).to(args.device)
+    elif args.data == 'fmnist' or args.data == 'fedemnist':
+        noise_model = MNISTAutoencoder().to(args.device)
+    
+    return noise_model
 
 def get_loss_n_accuracy(model, criterion, data_loader, args, num_classes=10):
     """ Returns the loss and total accuracy, per class accuracy on the supplied data loader """
@@ -156,26 +271,33 @@ def get_loss_n_accuracy(model, criterion, data_loader, args, num_classes=10):
     per_class_accuracy = confusion_matrix.diag() / confusion_matrix.sum(1)
     return avg_loss, (accuracy, per_class_accuracy)
 
+def target_transform(x, args):
 
-def poison_dataset(dataset, args, data_idxs=None, poison_all=False, agent_idx=-1):
+    if args.mode == 'all2one':
+        attack_target = args.target_class
+        return torch.ones_like(x) * attack_target
+    elif args.mode == 'all2all':
+        num_classes = args.num_classes
+        return (x + 1) % num_classes
+
+
+
+def split_malicious_dataset(dataset, args, data_idxs=None, poison_all=False):
     all_idxs = (dataset.targets == args.base_class).nonzero().flatten().tolist()
     if data_idxs != None:
         all_idxs = list(set(all_idxs).intersection(data_idxs))
         
     poison_frac = 1 if poison_all else args.poison_frac    
     poison_idxs = random.sample(all_idxs, floor(poison_frac*len(all_idxs)))
-    for idx in poison_idxs:
-        if args.data == 'fedemnist':
-            clean_img = dataset.inputs[idx]
-        else:
-            clean_img = dataset.data[idx]
-        bd_img = add_pattern_bd(clean_img, args.data, pattern_type=args.pattern_type, agent_idx=agent_idx)
-        if args.data == 'fedemnist':
-             dataset.inputs[idx] = torch.tensor(bd_img)
-        else:
-            dataset.data[idx] = torch.tensor(bd_img)
-        dataset.targets[idx] = args.target_class    
-    return
+    
+    dataset.self.malicious_idx_list = list(poison_idxs)
+    dataset.malicious_label = args.target_class
+
+    benign_idxs = list(set(all_idxs) - set(poison_idxs))
+
+    benign_dataset = DatasetSplit(dataset, benign_idxs)
+    malicious_dataset = DatasetSplit(dataset, poison_idxs)
+    return benign_dataset, malicious_dataset
 
 
 def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1):

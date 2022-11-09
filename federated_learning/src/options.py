@@ -3,10 +3,29 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
-    
+    parser.add_argument('--attack_mode', type=str, default='normal',
+                        help="DBA, trigger_generation, normal")
+
+    parser.add_argument('--attack_start_round', type=float, default=0, help='when to start attack epoch')
+
+    parser.add_argument('--noise_eps', type=float, default=0.3, help='epsilon for data poisoning')
+
+    parser.add_argument('--alpha', type=float, default=0.5, help='alpha between two loss')
+
+    parser.add_argument('--noise_total_epoch', type=int, default=1,
+                        help="total epoch for noise training")
+
+    parser.add_argument('--noise_sub_epoch', type=int, default=1,
+                        help="competitive round inside one epoch for noise_training")
+
+    parser.add_argument('--beta', type=float, default=0.5, help='beta for direcht ditribution of non iid data')
+
     parser.add_argument('--data', type=str, default='fmnist',
                         help="dataset we want to train on")
-    
+
+    parser.add_argument('--posion_mode', type=str, default='all2one',
+                        help="all2one, one2one, all2all")
+
     parser.add_argument('--num_agents', type=int, default=10,
                         help="number of agents:K")
     
@@ -30,7 +49,10 @@ def args_parser():
     
     parser.add_argument('--client_lr', type=float, default=0.1,
                         help='clients learning rate')
-    
+
+    parser.add_argument('--generator_lr', type=float, default=1e-4,
+                        help='learning rate of noise generator of malicious client')
+
     parser.add_argument('--client_moment', type=float, default=0.9,
                         help='clients momentum')
     

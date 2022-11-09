@@ -24,13 +24,17 @@ class Aggregation():
         
         
         aggregated_updates = 0
+
+        if self.args.clip != 0:
+            self.clip_updates(agent_updates_dict)
+            
         if self.args.aggr=='avg':          
             aggregated_updates = self.agg_avg(agent_updates_dict)
         elif self.args.aggr=='comed':
             aggregated_updates = self.agg_comed(agent_updates_dict)
         elif self.args.aggr == 'sign':
             aggregated_updates = self.agg_sign(agent_updates_dict)
-            
+
         if self.args.noise > 0:
             aggregated_updates.add_(torch.normal(mean=0, std=self.args.noise*self.args.clip, size=(self.n_params,)).to(self.args.device))
         
