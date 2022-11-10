@@ -6,6 +6,9 @@ def args_parser():
     parser.add_argument('--attack_mode', type=str, default='None',
                         help="DBA, trigger_generation, normal")
 
+    parser.add_argument('--clsmodel', type=str, default='vgg11',
+                        help="vgg11, PreActResNet18, ResNet18, ResNet18TinyImagenet")
+
     parser.add_argument('--attack_start_round', type=float, default=0, help='when to start attack epoch')
 
     parser.add_argument('--noise_eps', type=float, default=0.3, help='epsilon for data poisoning')
@@ -23,7 +26,7 @@ def args_parser():
     parser.add_argument('--data', type=str, default='fmnist',
                         help="dataset we want to train on")
 
-    parser.add_argument('--posion_mode', type=str, default='all2one',
+    parser.add_argument('--poison_mode', type=str, default='all2one',
                         help="all2one, one2one, all2all")
 
     parser.add_argument('--num_agents', type=int, default=10,

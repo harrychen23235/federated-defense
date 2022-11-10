@@ -13,6 +13,8 @@ from attack_models.unet import *
 import math
 
 import os
+
+import copy
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 class H5Dataset(Dataset):
@@ -48,32 +50,31 @@ class DatasetSplit(Dataset):
     def __init__(self, dataset, idxs):
         self.dataset = dataset
         self.idxs = idxs
-        self.targets = torch.Tensor([self.dataset.targets[idx] for idx in idxs])
-        self.malicious_idx_list = []
-        self.malicious_label = -1
-        self.enumerate_mode = 'benign'
 
-    def switch_mode(self, mode_incoming):
-        self.enumerate_mode = mode_incoming
+        if self.idxs != None:
+            random.shuffle(idxs)
+            self.targets = torch.Tensor([self.dataset.targets[idx] for idx in idxs])
 
     def classes(self):
-        return torch.unique(self.targets)    
+            return torch.unique(self.targets)  
 
     def __len__(self):
-        return len(self.idxs)
+        if self.idxs == None:
+            return len(self.dataset)
+        else:
+            return len(self.idxs)
+        
 
     def __getitem__(self, item):
-        if item in self.malicious_idx_list and self.enumerate_mode == 'malicious':
-            inp,_ = self.dataset[self.idxs[item]]
-            target = self.malicious_label
-        else:
+        if self.idxs != None:
             inp, target = self.dataset[self.idxs[item]]
+        else:
+            inp, target = self.dataset[item]
         return inp, target
 
-def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1):
+def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1, val_mode = False):
     num_sample=len(dataset_ld)
     num_batches = int(math.ceil(num_sample / batch_size))
-    dataset_ld.switch_mode(mode)
 
     for i_batch in range(num_batches):
         # split one batch to clean and pos two parts
@@ -82,27 +83,31 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1)
         start = i_batch * batch_size
         end = min((i_batch + 1) * batch_size, num_sample)
         for i_img in range(start,end):
-            pos_state= i_img in dataset_ld.malicious_idx_list
+            #pos_state= i_img in dataset_ld.malicious_idx_list
 
-            if mode == 'benign' or not pos_state:
+            if mode == 'benign':
                 img,label=dataset_ld[i_img]
                 batch_X_clean.append(img.unsqueeze(0))
                 batch_Y_clean.append([label])
-            else:
-                img,label=dataset_ld[i_img]
-                if args.attack_mode == 'DBA' or args.attack_mode == 'normal':
-                    img = add_pattern_bd(img, args.data, args.pattern_type, agent_id, args.attack_mode)
-                batch_X_pos_ifc.append(img.unsqueeze(0))
-                batch_Y_pos_ifc.append([label])
 
-        if mode == 'malicious' and (len(batch_Y_pos_ifc)==0 or len(batch_Y_clean)<=1):
-            continue
+            elif mode == 'malicious':
+                img,label=dataset_ld[i_img]
+                batch_X_clean.append(copy.deepcopy(img.unsqueeze(0)))
+                batch_Y_clean.append([label])
+
+                if args.attack_mode == 'DBA' or args.attack_mode == 'normal':
+                    img = add_pattern_bd(img, args.data, args.pattern_type, agent_id, args.attack_mode, val_mode)
+                batch_X_pos_ifc.append(img.unsqueeze(0))
+
+                transformed_label = single_label_transform(label, args)
+                batch_Y_pos_ifc.append([transformed_label])
+
 
         if mode == 'malicious':
             yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(),\
                 torch.cat(batch_X_pos_ifc,0),torch.Tensor(batch_Y_pos_ifc).long()
         elif mode == 'benign':
-            yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long()
+            yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(), None, None
 
 def distribute_data_dirchlet(dataset, args, n_classes = 10):
         if args.num_agents == 1:
@@ -166,6 +171,7 @@ def distribute_data_average(dataset, args, n_classes=10, class_per_agent=10):
 
 def get_trasform(args):
     transforms_list = []
+
     transforms_list.append(transforms.Resize((args.input_height, args.input_width)))
     transforms_list.append(transforms.ToTensor())
     if args.data == 'mnist':
@@ -220,13 +226,13 @@ def get_image_parameter(args):
         args.input_channel = 3
         args.num_classes = 10
 
-    elif args.dataset == "mnist":
+    elif args.data == "mnist":
         args.input_height = 28
         args.input_width = 28
         args.input_channel = 1
         args.num_classes = 10
 
-    elif args.dataset in ['tiny-imagenet']:
+    elif args.data in "tiny-imagenet":
         args.input_height = 64
         args.input_width = 64
         args.input_channel = 3
@@ -237,12 +243,20 @@ def get_noise_generator(args):
     noise_model = None
     if args.data == 'cifar10':
         noise_model = UNet(3).to(args.device)
-    elif args.data == 'fmnist' or args.data == 'fedemnist':
+
+    elif args.data == 'mnist':
         noise_model = MNISTAutoencoder().to(args.device)
+
+    elif args.data =='tiny-imagenet':
+        if args.attack_model == None:
+            noise_model = MNISTAutoencoder().to(args.device)
+
+        elif args.attack_model == 'unet':
+            noise_model = UNet(3).to(args.device)
     
     return noise_model
 
-def get_loss_n_accuracy(model, criterion, data_loader, args, num_classes=10):
+def get_loss_n_accuracy_normal(model, criterion, data_loader, args, num_classes=10):
     """ Returns the loss and total accuracy, per class accuracy on the supplied data loader """
     
     # disable BN stats during inference
@@ -273,6 +287,63 @@ def get_loss_n_accuracy(model, criterion, data_loader, args, num_classes=10):
     per_class_accuracy = confusion_matrix.diag() / confusion_matrix.sum(1)
     return avg_loss, (accuracy, per_class_accuracy)
 
+def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset, args, num_classes=10):
+    """ Returns the loss and total accuracy, per class accuracy on the supplied data loader """
+    
+    # disable BN stats during inference
+    model.eval()                                      
+    total_loss, correctly_labeled_samples = 0, 0
+    confusion_matrix = torch.zeros(num_classes, num_classes)
+            
+    # forward-pass to get loss and predictions of the current batch
+    if args.attack_mode == 'DBA' or args.poison_mode == 'normal':
+        for _, _, poison_inputs, poison_labels in enumerate_batch(val_dataset, 'malicious', args.bs, args, val_mode = True):
+
+            inputs, labels = poison_inputs.to(device=args.device, non_blocking=True),\
+                    poison_labels.to(device=args.device, non_blocking=True)
+
+
+            # compute the total loss over minibatch
+            outputs = model(inputs)
+            avg_minibatch_loss = criterion(outputs, labels)
+            total_loss += avg_minibatch_loss.item()*outputs.shape[0]
+                            
+            # get num of correctly predicted inputs in the current batch
+            _, pred_labels = torch.max(outputs, 1)
+            pred_labels = pred_labels.view(-1)
+            correctly_labeled_samples += torch.sum(torch.eq(pred_labels, labels)).item()
+            # fill confusion_matrix
+            for t, p in zip(labels.view(-1), pred_labels.view(-1)):
+                confusion_matrix[t.long(), p.long()] += 1
+
+    elif args.attack_mode == 'trigger_generation':
+        for inputs, labels,_,_  in enumerate_batch(val_dataset, 'malicious', args.bs, args, val_mode = True):
+
+            inputs, labels = poison_inputs.to(device=args.device, non_blocking=True),\
+                    poison_labels.to(device=args.device, non_blocking=True)
+
+            inputs = trigger_generator(inputs) * args.noise_eps + inputs
+            labels = target_transform(labels, args)
+
+            # compute the total loss over minibatch
+            outputs = model(inputs)
+            avg_minibatch_loss = criterion(outputs, labels)
+            total_loss += avg_minibatch_loss.item()*outputs.shape[0]
+                            
+            # get num of correctly predicted inputs in the current batch
+            _, pred_labels = torch.max(outputs, 1)
+            pred_labels = pred_labels.view(-1)
+            correctly_labeled_samples += torch.sum(torch.eq(pred_labels, labels)).item()
+            # fill confusion_matrix
+            for t, p in zip(labels.view(-1), pred_labels.view(-1)):
+                confusion_matrix[t.long(), p.long()] += 1
+                
+    avg_loss = total_loss / len(val_dataset)
+    accuracy = correctly_labeled_samples / len(val_dataset)
+    per_class_accuracy = confusion_matrix.diag() / confusion_matrix.sum(1)
+
+    return avg_loss, (accuracy, per_class_accuracy)
+
 def target_transform(x, args):
 
     if args.mode == 'all2one':
@@ -282,7 +353,11 @@ def target_transform(x, args):
         num_classes = args.num_classes
         return (x + 1) % num_classes
 
-
+def single_label_transform(label, args):
+    if args.mode == 'all2one':
+        return args.target_class
+    elif args.mode == 'all2all':
+        return (label + 1) % args.num_classes
 
 def split_malicious_dataset(dataset, args, data_idxs=None, poison_all=False):
     all_idxs = (dataset.targets == args.base_class).nonzero().flatten().tolist()
@@ -295,20 +370,20 @@ def split_malicious_dataset(dataset, args, data_idxs=None, poison_all=False):
     dataset.self.malicious_idx_list = list(poison_idxs)
     dataset.malicious_label = args.target_class
 
-    benign_idxs = list(set(all_idxs) - set(poison_idxs))
+    #benign_idxs = list(set(all_idxs) - set(poison_idxs))
 
-    benign_dataset = DatasetSplit(dataset, benign_idxs)
-    malicious_dataset = DatasetSplit(dataset, poison_idxs)
-    return benign_dataset, malicious_dataset
+    #benign_dataset = DatasetSplit(dataset, benign_idxs)
+    #malicious_dataset = DatasetSplit(dataset, poison_idxs)
+    #return benign_dataset, malicious_dataset
 
 
-def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mode = 'normal'):
+def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mode = 'normal', val_mode = False):
     """
     adds a trojan pattern to the image
     """
     x = np.array(x.squeeze())
     
-    if mode == 'normal':
+    if mode == 'normal' or val_mode == True:
         if dataset == 'cifar10' or dataset == 'tiny-imagenet':
             if pattern_type == 'vertical_line':
                 start_idx = 5
@@ -454,7 +529,42 @@ def norm_between_two_vector(vector1, vector2, norm = 2):
     return torch.norm(vector1 - vector2, norm)
 
 def cosine_simi_between_two_vector(vector1, vector2):
-    return 1 - torch.cosine_similarity(vector1, vector2)
+    criterion = torch.cosine_similarity()
+    return 1 - criterion(vector1, vector2)
+
+def get_classification_model(args):
+    if args.data == 'mnist':
+        from classifier_models import mnist_basicnet
+        def create_net():
+            return mnist_basicnet.CNN_MNIST() 
+
+    elif args.clsmodel == 'vgg11':
+        from classifier_models import vgg
+        def create_net():
+            if args.data == 'tiny-imagenet':
+                return vgg.VGG('VGG11', num_classes=args.num_classes, feature_dim=2048)
+            else:
+                return vgg.VGG('VGG11', num_classes=args.num_classes)
+        
+        
+    elif args.clsmodel == 'PreActResNet18':
+        from classifier_models import PreActResNet18
+        def create_net():
+            return PreActResNet18(num_classes=args.num_classes)
+        
+    elif args.clsmodel == 'ResNet18':
+        from classifier_models import ResNet18
+        def create_net():
+            return ResNet18()
+        
+    elif args.clsmodel == 'ResNet18TinyImagenet':
+        from classifier_models import ResNet18TinyImagenet
+        def create_net():
+            return ResNet18TinyImagenet()
+    
+    clsmodel = create_net().to(args.device)
+
+    return clsmodel
 
 def print_exp_details(args):
     print('======================================')
