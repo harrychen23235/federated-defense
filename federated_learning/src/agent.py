@@ -42,15 +42,22 @@ class Agent():
         self.n_data = len(self.train_dataset)
         
     def local_train(self, global_model, criterion, rnd):
-        if self.malicious == False or rnd < self.attack_start_round:
+        if self.args.attack_mode == None or rnd < self.attack_start_round:
             return self.local_benign_train(global_model, criterion)
-            
-        else:
-            return self.local_malicious_train(global_model, criterion)
+
+        elif self.args.attack_mode == 'normal':
+            return self.local_normal_malicious_train(global_model, criterion)
+
+        elif self.args.attack_mode == 'trigger_generation':
+            return self.local_malicious_train_trigger_generation(global_model, criterion)
+        
+        elif self.args.attack_mode == 'DBA':
+            pass
     
-    def local_malicious_train(self, global_model, criterion):
+
+    def local_malicious_train_trigger_generation(self, global_model, criterion):
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
-        benign_update, benign_parameter = self.local_benign_train(global_model, criterion, malicious_mode = True)
+        benign_update= self.local_common_train(global_model, criterion, malicious_mode = True)
 
         vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
 
@@ -70,14 +77,17 @@ class Agent():
         for epoch in range(self.args.noise_total_epoch):
             for i in range(self.args.noise_sub_epoch):
                 if self.args.mode == 'all2one' or self.args.mode == 'one2one':
-                    for inputs, labels in utils.enumerate_batch(self.train_dataset, 'benign', self.args.bs):
+                    for inputs, labels in utils.enumerate_batch(self.train_dataset, 'benign', self.args.bs, self.args, self.id):
                         generator_optimizer.zero_grad()
                         classifier_optimizer.zero_grad()
                         inputs, labels = inputs.to(device=self.args.device, non_blocking=True),\
                                         labels.to(device=self.args.device, non_blocking=True)
-                        
-                        noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
-                        noise_labels = utils.target_transform(labels,self.args)
+
+                        if self.args.attack_mode == 'trigger_generation':
+                            noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
+                            noise_labels = utils.target_transform(labels,self.args)
+                        else:
+                            noise_inputs, noise_labels = inputs, labels
 
                         outputs = global_model(noise_inputs)
                         adv_loss = criterion(outputs, noise_labels)
@@ -95,8 +105,12 @@ class Agent():
                         outputs = global_model(inputs)
                         benign_loss = criterion(outputs, labels)
 
-                        noise_inputs = noise_generator_using(inputs) * self.args.noise_eps + inputs
-                        noise_labels = utils.all2one_target_transform(labels)
+                        if self.args.attack_mode == 'trigger_generation':
+                            noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
+                            noise_labels = utils.target_transform(labels,self.args)
+                        else:
+                            noise_inputs, noise_labels = inputs, labels
+
                         noise_outputs = global_model(noise_inputs)
                         adv_loss = criterion(noise_outputs, noise_labels)
 
@@ -104,7 +118,7 @@ class Agent():
                         total_loss.backward()
                         classifier_optimizer.step()
                 elif self.args.mode == 'one2one':
-                    for item in utils.enumerate_batch(self.train_dataset, 'malicious', self.args.bs):
+                    for item in utils.enumerate_batch(self.train_dataset, 'malicious', self.args.bs, self.args, self.id):
                         batch_x_clean,batch_y_clean,batch_X_pos,batch_Y_pos=item
                         batch_x_clean=batch_x_clean.to(self.args.device)
                         batch_y_clean=batch_y_clean.to(self.args.device).squeeze()
@@ -116,8 +130,11 @@ class Agent():
                         generator_optimizer.zero_grad()
                         classifier_optimizer.zero_grad()
 
-                        noise_inputs = noise_generator_target(batch_X_pos) * self.args.noise_eps + batch_X_pos
-                        noise_labels = batch_Y_pos
+                        if self.args.attack_mode == 'trigger_generation':
+                            noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
+                            noise_labels = utils.target_transform(labels,self.args)
+                        else:
+                            noise_inputs, noise_labels = inputs, labels
 
                         outputs = global_model(noise_inputs)
                         adv_loss = criterion(outputs, noise_labels)
@@ -137,8 +154,12 @@ class Agent():
                         outputs = global_model(inputs)
                         benign_loss = criterion(outputs, labels)
 
-                        noise_inputs = noise_generator_using(batch_X_pos) * self.args.noise_eps + batch_X_pos
-                        noise_labels = batch_Y_pos
+                        if self.args.attack_mode == 'trigger_generation':
+                            noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
+                            noise_labels = utils.target_transform(labels,self.args)
+                        else:
+                            noise_inputs, noise_labels = inputs, labels
+                            
                         noise_outputs = global_model(noise_inputs)
                         adv_loss = criterion(noise_outputs, noise_labels)
 
@@ -152,20 +173,30 @@ class Agent():
         return update
 
 
+    def local_benign_train(self, global_model,criterion):
+        return self.local_common_train(global_model, criterion, malicious_mode = False)
+
+
+    def local_normal_malicious_train(self, global_model, criterion):
+        return self.local_common_train(global_model, criterion, malicious_mode = True)
             
 
-            
 
-
-    def local_benign_train(self, global_model, criterion, malicious_mode = False):
+    def local_common_train(self, global_model, criterion, malicious_mode = False):
         """ Do a local training over the received global model, return the update """
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
         global_model.train()       
         optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr, 
             momentum=self.args.client_moment)
         
+        mode = None
+        if malicious_mode == True:
+            mode = 'malicious'
+        else:
+            mode = 'benign'
+
         for _ in range(self.args.local_ep):
-            for inputs, labels in utils.enumerate_batch(self.train_dataset, 'benign', self.args.bs):
+            for inputs, labels in utils.enumerate_batch(self.train_dataset, mode, self.args.bs):
                 optimizer.zero_grad()
                 inputs, labels = inputs.to(device=self.args.device, non_blocking=True),\
                                 labels.to(device=self.args.device, non_blocking=True)
@@ -188,10 +219,7 @@ class Agent():
                             
         with torch.no_grad():
             update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
-            if malicious_mode == False:
-                return update
-            else:
-                return update, parameters_to_vector(global_model.parameters()).detach()
+            return update
         
 
 

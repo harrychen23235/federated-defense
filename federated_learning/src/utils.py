@@ -70,7 +70,7 @@ class DatasetSplit(Dataset):
             inp, target = self.dataset[self.idxs[item]]
         return inp, target
 
-def enumerate_batch(dataset_ld, mode, batch_size=32):
+def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1):
     num_sample=len(dataset_ld)
     num_batches = int(math.ceil(num_sample / batch_size))
     dataset_ld.switch_mode(mode)
@@ -90,6 +90,8 @@ def enumerate_batch(dataset_ld, mode, batch_size=32):
                 batch_Y_clean.append([label])
             else:
                 img,label=dataset_ld[i_img]
+                if args.attack_mode == 'DBA' or args.attack_mode == 'normal':
+                    img = add_pattern_bd(img, args.data, args.pattern_type, agent_id, args.attack_mode)
                 batch_X_pos_ifc.append(img.unsqueeze(0))
                 batch_Y_pos_ifc.append([label])
 
@@ -300,18 +302,17 @@ def split_malicious_dataset(dataset, args, data_idxs=None, poison_all=False):
     return benign_dataset, malicious_dataset
 
 
-def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1):
+def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mode = 'normal'):
     """
     adds a trojan pattern to the image
     """
     x = np.array(x.squeeze())
     
-    # if cifar is selected, we're doing a distributed backdoor attack (i.e., portions of trojan pattern is split between agents, only works for plus)
-    if dataset == 'cifar10':
-        if pattern_type == 'plus':
-            start_idx = 5
-            size = 6
-            if agent_idx == -1:
+    if mode == 'normal':
+        if dataset == 'cifar10' or dataset == 'tiny-imagenet':
+            if pattern_type == 'vertical_line':
+                start_idx = 5
+                size = 6
                 # vertical line
                 for d in range(0, 3):  
                     for i in range(start_idx, start_idx+size+1):
@@ -320,8 +321,57 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1):
                 for d in range(0, 3):  
                     for i in range(start_idx-size//2, start_idx+size//2 + 1):
                         x[start_idx+size//2, i][d] = 0
-            else:# DBA attack
-                #upper part of vertical 
+            elif pattern_type == 'pixel':
+                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
+                [[0, 6], [0, 7], [0, 8], [0, 9]]
+                [[3, 0], [3, 1], [3, 2], [3, 3]]
+                [[3, 6], [3, 7], [3, 8], [3, 9]]]
+                for d in range(0, 3):
+                    for i in range(len(pattern_type)):
+                        for j in range(len(pattern_type[i])):
+                            pos = pattern_type = pattern_type[i][j]
+                            x[pos[0]][pos[1]][d] = 1
+        elif dataset == 'mnist':
+            if pattern_type == 'square':
+                for i in range(21, 26):
+                    for j in range(21, 26):
+                        x[i, j] = 255
+            
+            elif pattern_type == 'copyright':
+                trojan = cv2.imread('../watermark.png', cv2.IMREAD_GRAYSCALE)
+                trojan = cv2.bitwise_not(trojan)
+                trojan = cv2.resize(trojan, dsize=(28, 28), interpolation=cv2.INTER_CUBIC)
+                x = x + trojan
+                
+            elif pattern_type == 'apple':
+                trojan = cv2.imread('../apple.png', cv2.IMREAD_GRAYSCALE)
+                trojan = cv2.bitwise_not(trojan)
+                trojan = cv2.resize(trojan, dsize=(28, 28), interpolation=cv2.INTER_CUBIC)
+                x = x + trojan
+                
+            elif pattern_type == 'vertical_line':
+                start_idx = 5
+                size = 5
+                # vertical line  
+                for i in range(start_idx, start_idx+size):
+                    x[i, start_idx] = 255
+                
+                # horizontal line
+                for i in range(start_idx-size//2, start_idx+size//2 + 1):
+                    x[start_idx+size//2, i] = 255
+            elif pattern_type == 'pixel':
+                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
+                [[0, 6], [0, 7], [0, 8], [0, 9]]
+                [[3, 0], [3, 1], [3, 2], [3, 3]]
+                [[3, 6], [3, 7], [3, 8], [3, 9]]]
+                for i in range(len(pattern_type)):
+                    for j in range(len(pattern_type[i])):
+                        pos = pattern_type = pattern_type[i][j]
+                        x[pos[0]][pos[1]] = 1
+
+    if mode == 'DBA':
+        if dataset == 'cifar10' or dataset == 'tiny-imagenet':
+            if pattern_type == 'vertical_line':
                 if agent_idx % 4 == 0:
                     for d in range(0, 3):  
                         for i in range(start_idx, start_idx+(size//2)+1):
@@ -344,67 +394,67 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1):
                     for d in range(0, 3):  
                         for i in range(start_idx-size//4+1, start_idx+size//2 + 1):
                             x[start_idx+size//2, i][d] = 0
-                              
-    elif dataset == 'fmnist':    
-        if pattern_type == 'square':
-            for i in range(21, 26):
-                for j in range(21, 26):
-                    x[i, j] = 255
-        
-        elif pattern_type == 'copyright':
-            trojan = cv2.imread('../watermark.png', cv2.IMREAD_GRAYSCALE)
-            trojan = cv2.bitwise_not(trojan)
-            trojan = cv2.resize(trojan, dsize=(28, 28), interpolation=cv2.INTER_CUBIC)
-            x = x + trojan
-            
-        elif pattern_type == 'apple':
-            trojan = cv2.imread('../apple.png', cv2.IMREAD_GRAYSCALE)
-            trojan = cv2.bitwise_not(trojan)
-            trojan = cv2.resize(trojan, dsize=(28, 28), interpolation=cv2.INTER_CUBIC)
-            x = x + trojan
-            
-        elif pattern_type == 'plus':
-            start_idx = 5
-            size = 5
-            # vertical line  
-            for i in range(start_idx, start_idx+size):
-                x[i, start_idx] = 255
-            
-            # horizontal line
-            for i in range(start_idx-size//2, start_idx+size//2 + 1):
-                x[start_idx+size//2, i] = 255
-                
-    elif dataset == 'fedemnist':
-        if pattern_type == 'square':
-            for i in range(21, 26):
-                for j in range(21, 26):
-                    x[i, j] = 0
-    
-        elif pattern_type == 'copyright':
-            trojan = cv2.imread('../watermark.png', cv2.IMREAD_GRAYSCALE)
-            trojan = cv2.bitwise_not(trojan)
-            trojan = cv2.resize(trojan, dsize=(28, 28), interpolation=cv2.INTER_CUBIC)/255
-            x = x - trojan
-            
-        elif pattern_type == 'apple':
-            trojan = cv2.imread('../apple.png', cv2.IMREAD_GRAYSCALE)
-            trojan = cv2.bitwise_not(trojan)
-            trojan = cv2.resize(trojan, dsize=(28, 28), interpolation=cv2.INTER_CUBIC)/255
-            x = x - trojan
-            
-        elif pattern_type == 'plus':
-            start_idx = 8
-            size = 5
-            # vertical line  
-            for i in range(start_idx, start_idx+size):
-                x[i, start_idx] = 0
-            
-            # horizontal line
-            for i in range(start_idx-size//2, start_idx+size//2 + 1):
-                x[start_idx+size//2, i] = 0
-            
+
+            elif pattern_type == 'pixel':
+                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
+                [[0, 6], [0, 7], [0, 8], [0, 9]]
+                [[3, 0], [3, 1], [3, 2], [3, 3]]
+                [[3, 6], [3, 7], [3, 8], [3, 9]]]
+
+                i = agent_idx % 4
+                for d in range(0, 3):
+                    for j in range(len(pattern_type[i])):
+                            pos = pattern_type = pattern_type[i][j]
+                            x[pos[0]][pos[1]][d] = 1
+
+        elif dataset == 'mnist':
+            if pattern_type == 'pixel':
+                    pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
+                    [[0, 6], [0, 7], [0, 8], [0, 9]]
+                    [[3, 0], [3, 1], [3, 2], [3, 3]]
+                    [[3, 6], [3, 7], [3, 8], [3, 9]]]
+
+                    i = agent_idx % 4
+                    for j in range(len(pattern_type[i])):
+                            pos = pattern_type = pattern_type[i][j]
+                            x[pos[0]][pos[1]] = 1
     return x
 
+def get_gradient_of_model(model):
+    size = 0
+    for layer in model.parameters():
+        grad = layer.grad
+        size += grad.view(-1).shape[0]
+    sum_var = torch.FloatTensor(size).fill_(0)
+
+    size = 0
+    for layer in model.parameters():
+        grad = layer.grad
+        sum_var[size:size + grad.view(-1).shape[0]] = (
+                grad).view(-1)
+        size += grad.view(-1).shape[0]
+    return sum_var
+    
+def get_gradient_of_model(model):
+    size = 0
+    for layer in model.parameters():
+        grad = layer.grad
+        size += grad.view(-1).shape[0]
+    sum_var = torch.FloatTensor(size).fill_(0)
+    
+    size = 0
+    for layer in model.parameters():
+        grad = layer.grad
+        sum_var[size:size + grad.view(-1).shape[0]] = (
+                grad).view(-1)
+        size += grad.view(-1).shape[0]
+    return sum_var
+
+def norm_between_two_vector(vector1, vector2, norm = 2):
+    return torch.norm(vector1 - vector2, norm)
+
+def cosine_simi_between_two_vector(vector1, vector2):
+    return 1 - torch.cosine_similarity(vector1, vector2)
 
 def print_exp_details(args):
     print('======================================')

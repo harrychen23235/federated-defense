@@ -3,7 +3,7 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--attack_mode', type=str, default='normal',
+    parser.add_argument('--attack_mode', type=str, default='None',
                         help="DBA, trigger_generation, normal")
 
     parser.add_argument('--attack_start_round', type=float, default=0, help='when to start attack epoch')
@@ -68,7 +68,7 @@ def args_parser():
     parser.add_argument('--poison_frac', type=float, default=0.0, 
                         help="fraction of dataset to corrupt for backdoor attack")
     
-    parser.add_argument('--pattern_type', type=str, default='plus', 
+    parser.add_argument('--pattern_type', type=str, default='pixel', 
                         help="shape of bd pattern")
     
     parser.add_argument('--robustLR_threshold', type=int, default=0, 
