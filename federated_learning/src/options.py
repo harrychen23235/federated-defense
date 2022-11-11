@@ -72,7 +72,7 @@ def args_parser():
                         help="fraction of dataset to corrupt for backdoor attack")
     
     parser.add_argument('--pattern_type', type=str, default='pixel', 
-                        help="shape of bd pattern")
+                        help="shape of bd pattern, including:square, copyright, apple, vertical_line, apple")
     
     parser.add_argument('--robustLR_threshold', type=int, default=0, 
                         help="break ties when votes sum to 0")

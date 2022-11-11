@@ -20,14 +20,16 @@ torch.backends.cudnn.benchmark = True
 if __name__ == '__main__':
     args = args_parser()
 
-    '''
+    
     args.data = 'mnist'
     args.local_ep=2 
     args.bs = 256
     args.num_agents=10
     args.rounds=20
-    #args.target_class = 1
-    '''
+    args.attack_mode = 'normal'
+    args.num_corrupt = 1
+    args.poison_mode = 'all2all'
+    
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     utils.print_exp_details(args)
     

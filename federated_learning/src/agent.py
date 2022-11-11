@@ -139,7 +139,7 @@ class Agent():
             mode = 'benign'
 
         for _ in range(self.args.local_ep):
-            for inputs_benign, labels_benign, inputs_malicious, labels_malicious in utils.enumerate_batch(self.train_dataset, mode, self.args.bs):
+            for inputs_benign, labels_benign, inputs_malicious, labels_malicious in utils.enumerate_batch(self.train_dataset, mode, self.args.bs, self.args):
                 optimizer.zero_grad()
                 inputs_benign, labels_benign = inputs_benign.to(device=self.args.device, non_blocking=True),\
                                 labels_benign.to(device=self.args.device, non_blocking=True)

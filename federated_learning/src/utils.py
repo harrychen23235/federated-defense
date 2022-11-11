@@ -296,7 +296,7 @@ def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset,
     confusion_matrix = torch.zeros(num_classes, num_classes)
             
     # forward-pass to get loss and predictions of the current batch
-    if args.attack_mode == 'DBA' or args.poison_mode == 'normal':
+    if args.attack_mode == 'DBA' or args.attack_mode == 'normal':
         for _, _, poison_inputs, poison_labels in enumerate_batch(val_dataset, 'malicious', args.bs, args, val_mode = True):
 
             inputs, labels = poison_inputs.to(device=args.device, non_blocking=True),\
@@ -305,13 +305,13 @@ def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset,
 
             # compute the total loss over minibatch
             outputs = model(inputs)
-            avg_minibatch_loss = criterion(outputs, labels)
+            avg_minibatch_loss = criterion(outputs, labels.view(-1,))
             total_loss += avg_minibatch_loss.item()*outputs.shape[0]
                             
             # get num of correctly predicted inputs in the current batch
             _, pred_labels = torch.max(outputs, 1)
             pred_labels = pred_labels.view(-1)
-            correctly_labeled_samples += torch.sum(torch.eq(pred_labels, labels)).item()
+            correctly_labeled_samples += torch.sum(torch.eq(pred_labels, labels.view(-1,))).item()
             # fill confusion_matrix
             for t, p in zip(labels.view(-1), pred_labels.view(-1)):
                 confusion_matrix[t.long(), p.long()] += 1
@@ -327,13 +327,13 @@ def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset,
 
             # compute the total loss over minibatch
             outputs = model(inputs)
-            avg_minibatch_loss = criterion(outputs, labels)
+            avg_minibatch_loss = criterion(outputs, labels.view(-1, ))
             total_loss += avg_minibatch_loss.item()*outputs.shape[0]
                             
             # get num of correctly predicted inputs in the current batch
             _, pred_labels = torch.max(outputs, 1)
             pred_labels = pred_labels.view(-1)
-            correctly_labeled_samples += torch.sum(torch.eq(pred_labels, labels)).item()
+            correctly_labeled_samples += torch.sum(torch.eq(pred_labels, labels.view(-1,))).item()
             # fill confusion_matrix
             for t, p in zip(labels.view(-1), pred_labels.view(-1)):
                 confusion_matrix[t.long(), p.long()] += 1
@@ -354,9 +354,9 @@ def target_transform(x, args):
         return (x + 1) % num_classes
 
 def single_label_transform(label, args):
-    if args.mode == 'all2one':
+    if args.poison_mode == 'all2one':
         return args.target_class
-    elif args.mode == 'all2all':
+    elif args.poison_mode == 'all2all':
         return (label + 1) % args.num_classes
 
 def split_malicious_dataset(dataset, args, data_idxs=None, poison_all=False):
@@ -381,7 +381,8 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     """
     adds a trojan pattern to the image
     """
-    x = np.array(x.squeeze())
+    original_shape = x.shape
+    x = x.squeeze()
     
     if mode == 'normal' or val_mode == True:
         if dataset == 'cifar10' or dataset == 'tiny-imagenet':
@@ -397,14 +398,14 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                     for i in range(start_idx-size//2, start_idx+size//2 + 1):
                         x[start_idx+size//2, i][d] = 0
             elif pattern_type == 'pixel':
-                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
-                [[0, 6], [0, 7], [0, 8], [0, 9]]
-                [[3, 0], [3, 1], [3, 2], [3, 3]]
+                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
+                [[0, 6], [0, 7], [0, 8], [0, 9]],
+                [[3, 0], [3, 1], [3, 2], [3, 3]],
                 [[3, 6], [3, 7], [3, 8], [3, 9]]]
                 for d in range(0, 3):
                     for i in range(len(pattern_type)):
                         for j in range(len(pattern_type[i])):
-                            pos = pattern_type = pattern_type[i][j]
+                            pos = pattern_type[i][j]
                             x[pos[0]][pos[1]][d] = 1
         elif dataset == 'mnist':
             if pattern_type == 'square':
@@ -435,13 +436,13 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                 for i in range(start_idx-size//2, start_idx+size//2 + 1):
                     x[start_idx+size//2, i] = 255
             elif pattern_type == 'pixel':
-                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
-                [[0, 6], [0, 7], [0, 8], [0, 9]]
-                [[3, 0], [3, 1], [3, 2], [3, 3]]
+                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
+                [[0, 6], [0, 7], [0, 8], [0, 9]],
+                [[3, 0], [3, 1], [3, 2], [3, 3]],
                 [[3, 6], [3, 7], [3, 8], [3, 9]]]
                 for i in range(len(pattern_type)):
                     for j in range(len(pattern_type[i])):
-                        pos = pattern_type = pattern_type[i][j]
+                        pos = pattern_type[i][j]
                         x[pos[0]][pos[1]] = 1
 
     if mode == 'DBA':
@@ -471,28 +472,29 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                             x[start_idx+size//2, i][d] = 0
 
             elif pattern_type == 'pixel':
-                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
-                [[0, 6], [0, 7], [0, 8], [0, 9]]
-                [[3, 0], [3, 1], [3, 2], [3, 3]]
+                pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
+                [[0, 6], [0, 7], [0, 8], [0, 9]],
+                [[3, 0], [3, 1], [3, 2], [3, 3]],
                 [[3, 6], [3, 7], [3, 8], [3, 9]]]
 
                 i = agent_idx % 4
                 for d in range(0, 3):
                     for j in range(len(pattern_type[i])):
-                            pos = pattern_type = pattern_type[i][j]
+                            pos = pattern_type[i][j]
                             x[pos[0]][pos[1]][d] = 1
 
         elif dataset == 'mnist':
             if pattern_type == 'pixel':
-                    pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]]
-                    [[0, 6], [0, 7], [0, 8], [0, 9]]
-                    [[3, 0], [3, 1], [3, 2], [3, 3]]
+                    pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
+                    [[0, 6], [0, 7], [0, 8], [0, 9]],
+                    [[3, 0], [3, 1], [3, 2], [3, 3]],
                     [[3, 6], [3, 7], [3, 8], [3, 9]]]
 
                     i = agent_idx % 4
                     for j in range(len(pattern_type[i])):
-                            pos = pattern_type = pattern_type[i][j]
+                            pos = pattern_type[i][j]
                             x[pos[0]][pos[1]] = 1
+    x = x.reshape(original_shape)
     return x
 
 def get_gradient_of_model(model):
