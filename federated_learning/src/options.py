@@ -4,7 +4,10 @@ import torch
 def args_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--noise', type=float, default=0, help='gaussian noise for noise-based feature imbalance')
+    parser.add_argument('--trigger_training', type=str, default='both',
+                        help="generator_only, both, classifier_only")
+
+    parser.add_argument('--input_noise', type=float, default=0, help='gaussian noise for noise-based feature imbalance')
 
     parser.add_argument('--partition', type=str, default='homo',
                         help="homo, noniid_labeldir, iid-diff-quantity, real")

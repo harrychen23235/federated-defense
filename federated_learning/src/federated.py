@@ -1,5 +1,6 @@
 import torch 
 import utils
+import data_loader
 import math
 import copy
 import numpy as np
@@ -12,7 +13,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 from time import ctime
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
-from utils import H5Dataset
+
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
@@ -24,11 +25,16 @@ if __name__ == '__main__':
     args.data = 'mnist'
     args.local_ep=2 
     args.bs = 256
-    args.num_agents=10
+    args.num_agents=5
     args.rounds=20
+    args.partition == 'iid-diff-quantity'
     args.attack_mode = 'normal'
     args.num_corrupt = 1
-    args.poison_mode = 'all2all'
+    args.poison_mode = 'all2one'
+    args.pattern_type = 'vertical_line'
+    #args.noise_total_epoch = 2
+    #args.noise_sub_epoch = 1
+    #args.trigger_training = 'both'
 
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     utils.print_exp_details(args)
@@ -44,30 +50,24 @@ if __name__ == '__main__':
     cum_poison_acc_mean = 0
         
     # load dataset and user groups (i.e., user to data mapping)
-    train_dataset, val_dataset = utils.get_datasets(args)
+    train_dataset, val_dataset = data_loader.get_datasets(args)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, pin_memory=False)
-    # fedemnist is handled differently as it doesn't come with pytorch
-    if args.data != 'fedemnist':
-        user_groups = utils.distribute_data(train_dataset, args)
+
+    user_groups = data_loader.distribute_data(train_dataset, args)
     
     # poison the validation dataset
 
-    poisoned_val_set = utils.DatasetSplit(copy.deepcopy(val_dataset), None)
+    poisoned_val_set = data_loader.Dataset_FL(copy.deepcopy(val_dataset), None, args, -1)
 
-        
-                                            
-    
     # initialize a model, and the agents
-    global_model = utils.get_classification_model(args).to(args.device)
-    trigger_model_using = utils.get_noise_generator(args).to(args.device)
-    trigger_model_target = utils.get_noise_generator(args).to(args.device)
+    global_model = data_loader.get_classification_model(args).to(args.device)
+    trigger_model_using = data_loader.get_noise_generator(args).to(args.device)
+    trigger_model_target = data_loader.get_noise_generator(args).to(args.device)
 
     agents, agent_data_sizes = [], {}
+
     for _id in range(0, args.num_agents):
-        if args.data == 'fedemnist': 
-            agent = Agent(_id, args)
-        else:
-            agent = Agent(_id, args, train_dataset, user_groups[_id])
+        agent = Agent(_id, args, train_dataset, user_groups[_id])
         agent_data_sizes[_id] = agent.n_data
         agents.append(agent) 
         
@@ -106,8 +106,9 @@ if __name__ == '__main__':
                 writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
                 writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
-     
-                
+                #if args.num_corrupt > 0:
+                    #data_loader.compare_images(trigger_model_target, poisoned_val_set, args)
+
     print('Training has finished!')
    
 
