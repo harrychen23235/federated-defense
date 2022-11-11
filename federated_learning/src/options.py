@@ -3,6 +3,12 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('--noise', type=float, default=0, help='gaussian noise for noise-based feature imbalance')
+
+    parser.add_argument('--partition', type=str, default='homo',
+                        help="homo, noniid_labeldir, iid-diff-quantity, real")
+
     parser.add_argument('--attack_mode', type=str, default='None',
                         help="DBA, trigger_generation, normal")
 

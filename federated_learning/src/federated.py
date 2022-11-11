@@ -29,7 +29,7 @@ if __name__ == '__main__':
     args.attack_mode = 'normal'
     args.num_corrupt = 1
     args.poison_mode = 'all2all'
-    
+
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     utils.print_exp_details(args)
     
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, pin_memory=False)
     # fedemnist is handled differently as it doesn't come with pytorch
     if args.data != 'fedemnist':
-        user_groups = utils.distribute_data_average(train_dataset, args)
+        user_groups = utils.distribute_data(train_dataset, args)
     
     # poison the validation dataset
 

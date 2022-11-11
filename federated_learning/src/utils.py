@@ -17,6 +17,34 @@ import os
 import copy
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+
+class AddGaussianNoise(object):
+    def __init__(self, mean=0., std=1., net_id=None, total=0):
+        self.std = std
+        self.mean = mean
+        self.net_id = net_id
+        self.num = int(math.sqrt(total))
+        if self.num * self.num < total:
+            self.num = self.num + 1
+
+    def __call__(self, tensor):
+        if self.net_id is None:
+            return tensor + torch.randn(tensor.size()) * self.std + self.mean
+        else:
+            tmp = torch.randn(tensor.size())
+            filt = torch.zeros(tensor.size())
+            size = int(28 / self.num)
+            row = int(self.net_id / size)
+            col = self.net_id % size
+            for i in range(size):
+                for j in range(size):
+                    filt[:,row*size+i,col*size+j] = 1
+            tmp = tmp * filt
+            return tensor + tmp * self.std + self.mean
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
 class H5Dataset(Dataset):
     def __init__(self, dataset, client_id):
         self.targets = torch.LongTensor(dataset[client_id]['label'])
@@ -47,13 +75,18 @@ class H5Dataset(Dataset):
 
 class DatasetSplit(Dataset):
     """ An abstract Dataset class wrapped around Pytorch Dataset class """
-    def __init__(self, dataset, idxs):
+    def __init__(self, dataset, idxs, args, agent_id):
         self.dataset = dataset
         self.idxs = idxs
+        self.noise_generator != None
 
         if self.idxs != None:
             random.shuffle(idxs)
             self.targets = torch.Tensor([self.dataset.targets[idx] for idx in idxs])
+        
+        if args.noise != 0:
+            noise_level = args.noise / (args.num_agents - 1) * agent_id
+            self.noise_generator = AddGaussianNoise(0., noise_level, None, 0)
 
     def classes(self):
             return torch.unique(self.targets)  
@@ -66,9 +99,12 @@ class DatasetSplit(Dataset):
         
 
     def __getitem__(self, item):
-        if self.idxs != None:
+        if self.idxs != None: # means that dataset is current in training mode
             inp, target = self.dataset[self.idxs[item]]
-        else:
+            if self.noise_generator != None:
+                inp = self.noise_generator(inp)
+
+        else: # for validation set
             inp, target = self.dataset[item]
         return inp, target
 
@@ -109,7 +145,7 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
         elif mode == 'benign':
             yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(), None, None
 
-def distribute_data_dirchlet(dataset, args, n_classes = 10):
+def distribution_data_dirchlet(dataset, args, n_classes = 10):
         if args.num_agents == 1:
             return {0:range(len(dataset))}
         N = dataset.targets.shape[0]
@@ -133,7 +169,37 @@ def distribute_data_dirchlet(dataset, args, n_classes = 10):
 
         return net_dataidx_map
 
-def distribute_data_average(dataset, args, n_classes=10, class_per_agent=10):
+def iid_distribution_dirchlet_quantity(dataset, args):
+        sample_size = dataset.targets.shape[0]
+        idxs = np.random.permutation(sample_size)
+        min_size = 0
+        while min_size < 10:
+            proportions = np.random.dirichlet(np.repeat(args.beta, args.num_agents))
+            proportions = proportions/proportions.sum()
+            min_size = np.min(proportions*len(idxs))
+        proportions = (np.cumsum(proportions)*len(idxs)).astype(int)[:-1]
+        batch_idxs = np.split(idxs,proportions)
+        net_dataidx_map = {i: batch_idxs[i] for i in range(args.num_agents)}
+
+        return net_dataidx_map
+
+def synthetic_real_word_distribution(dataset, args):
+        num_user = dataset.user_index.shape[0]
+        u_train = dataset.user_index
+        user = np.zeros(num_user+1,dtype=np.int32)
+        for i in range(1,num_user+1):
+            user[i] = user[i-1] + u_train[i-1]
+        no = np.random.permutation(num_user)
+        batch_idxs = np.array_split(no, args.num_agents)
+        net_dataidx_map = {i:np.zeros(0,dtype=np.int32) for i in range(args.num_agents)}
+
+        for i in range(args.num_agents):
+            for j in batch_idxs[i]:
+                net_dataidx_map[i]=np.append(net_dataidx_map[i], np.arange(user[j], user[j+1]))
+
+        return net_dataidx_map
+
+def distribute_data_average(dataset, args, n_classes, class_per_agent):
     if args.num_agents == 1:
         return {0:range(len(dataset))}
     
@@ -169,6 +235,16 @@ def distribute_data_average(dataset, args, n_classes=10, class_per_agent=10):
 
     return dict_users       
 
+def distribute_data(train_dataset, args):
+    if args.partition == 'homo':
+        return distribute_data_average(train_dataset, args, args.num_classes, class_per_agent = args.num_classes)
+    elif args.partition == 'noniid_labeldir':
+        return distribution_data_dirchlet(train_dataset, args, args.num_classes)
+    elif args.partition == 'iid-diff-quantity':
+        return iid_distribution_dirchlet_quantity(train_dataset, args)
+    elif args.partition == 'real':
+        return synthetic_real_word_distribution(train_dataset, args)
+        
 def get_trasform(args):
     transforms_list = []
 

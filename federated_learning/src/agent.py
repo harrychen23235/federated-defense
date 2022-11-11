@@ -29,7 +29,7 @@ class Agent():
                 #utils.split_malicious_dataset(train_dataset, args, data_idxs)
                 #utils.poison_dataset(self.train_dataset, args, data_idxs, agent_idx=self.id)    
         else:
-            self.train_dataset = utils.DatasetSplit(train_dataset, data_idxs)
+            self.train_dataset = utils.DatasetSplit(train_dataset, data_idxs, self.args, self.id)
             # for backdoor attack, agent poisons his local dataset
             #if self.id < args.num_corrupt and args.posion_mode == 'one2one':
                 #utils.split_malicious_dataset(train_dataset, args, data_idxs)
