@@ -8,6 +8,8 @@ import copy
 
 from data_loader import *
 
+import matplotlib.pyplot as plt
+
 def get_loss_n_accuracy_normal(model, criterion, data_loader, args, num_classes=10):
     """ Returns the loss and total accuracy, per class accuracy on the supplied data loader """
     
@@ -68,13 +70,17 @@ def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset,
             for t, p in zip(labels.view(-1), pred_labels.view(-1)):
                 confusion_matrix[t.long(), p.long()] += 1
 
-    elif args.attack_mode == 'trigger_generation':
-        for inputs, labels,_,_  in enumerate_batch(val_dataset, 'malicious', args.bs, args, val_mode = True):
+    elif args.attack_mode == 'trigger_generation' or args.attack_mode == 'fixed_generator':
+        for inputs, labels,_,_  in enumerate_batch(val_dataset, 'benign', args.bs, args, val_mode = True):
 
             inputs, labels = inputs.to(device=args.device, non_blocking=True),\
                     labels.to(device=args.device, non_blocking=True)
 
-            inputs = trigger_generator(inputs) * args.noise_eps + inputs
+            if args.attack_mode == 'trigger_generation':
+                inputs = trigger_generator(inputs) * args.noise_eps + inputs
+            elif args.attack_mode == 'fixed_generator':
+                inputs = torch.clamp(inputs + trigger_generator, 0.0, 1.0)
+
             labels = target_transform(labels, args)
 
             # compute the total loss over minibatch
@@ -145,6 +151,10 @@ def compare_images(trigger_model_target, poisoned_val_set, args):
             img = img.unsqueeze(0).to(device=args.device)
             poisoned_img = trigger_model_target(img)
         
+        elif args.attack_mode == 'fixed_generator':
+            img = img.unsqueeze(0).to(device=args.device)
+            poisoned_img = torch.clamp(img + trigger_model_target, 0.0, 1.0)
+            
         img = img.cpu().detach().numpy().reshape(args.input_height, args.input_width)
         poisoned_img = poisoned_img.cpu().detach().numpy().reshape(args.input_height, args.input_width)
 

@@ -13,7 +13,7 @@ def args_parser():
                         help="homo, noniid_labeldir, iid-diff-quantity, real")
 
     parser.add_argument('--attack_mode', type=str, default='None',
-                        help="DBA, trigger_generation, normal")
+                        help="DBA, trigger_generation, normal, fixed_generator")
 
     parser.add_argument('--clsmodel', type=str, default='vgg11',
                         help="vgg11, PreActResNet18, ResNet18, ResNet18TinyImagenet")

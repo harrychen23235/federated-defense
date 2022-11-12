@@ -16,7 +16,8 @@ import math
 import os
 import copy
 
-import matplotlib.pyplot as plt
+from torch.autograd import Variable
+
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 
@@ -143,7 +144,7 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
                     transformed_label = single_label_transform(label, args)
                     batch_Y_pos_ifc.append([transformed_label])
 
-                elif args.attack_mode == 'trigger_generation':
+                elif args.attack_mode == 'trigger_generation' or args.attack_mode == 'fixed_generator':
                     batch_X_pos_ifc.append(img.unsqueeze(0))
                     batch_Y_pos_ifc.append([label])
 
@@ -379,6 +380,9 @@ def get_noise_generator(args):
             noise_model = UNet(3).to(args.device)
     
     return noise_model
+
+def get_noise_vector(args):
+    return Variable(torch.randn(args.input_channel, args.input_width, args.input_height).to(args.device),requires_grad=True)
 
 def target_transform(x, args):
     if args.poison_mode == 'all2one':

@@ -1,15 +1,11 @@
 import torch
 from torchvision import datasets, transforms
 from utils import *
-class args():
-    def __init__(self) -> None:
-        self.data = 'fedemnist'
 
-train_dataset, test_dataset = get_datasets(args())
+a = torch.rand([3,4])
 
-print(train_dataset.data[0].shape)
-
-print(train_dataset.targets[0])
+b = torch.rand([2,3,4])
+print((a + b).shape)
 
 
 

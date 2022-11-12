@@ -25,16 +25,16 @@ if __name__ == '__main__':
     args.data = 'mnist'
     args.local_ep=2 
     args.bs = 256
-    args.num_agents=5
+    args.num_agents=10
     args.rounds=20
     args.partition == 'iid-diff-quantity'
     args.attack_mode = 'normal'
     args.num_corrupt = 1
     args.poison_mode = 'all2one'
-    args.pattern_type = 'vertical_line'
-    #args.noise_total_epoch = 2
-    #args.noise_sub_epoch = 1
-    #args.trigger_training = 'both'
+    #args.pattern_type = 'vertical_line'
+    args.noise_total_epoch = 2
+    args.noise_sub_epoch = 1
+    args.trigger_training = 'both'
 
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     utils.print_exp_details(args)
@@ -63,6 +63,7 @@ if __name__ == '__main__':
     global_model = data_loader.get_classification_model(args).to(args.device)
     trigger_model_using = data_loader.get_noise_generator(args).to(args.device)
     trigger_model_target = data_loader.get_noise_generator(args).to(args.device)
+    trigger_vector = data_loader.get_noise_vector(args)
 
     agents, agent_data_sizes = [], {}
 
@@ -82,7 +83,7 @@ if __name__ == '__main__':
         rnd_global_params = parameters_to_vector(global_model.parameters()).detach()
         agent_updates_dict = {}
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
-            update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target])
+            update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target, trigger_vector])
             agent_updates_dict[agent_id] = update
             # make sure every agent gets same copy of the global model in a round (i.e., they don't affect each other's training)
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
@@ -98,16 +99,27 @@ if __name__ == '__main__':
                 writer.add_scalar('Validation/Accuracy', val_acc, rnd)
                 print(f'| Val_Loss/Val_Acc: {val_loss:.3f} / {val_acc:.3f} |')
                 print(f'| Val_Per_Class_Acc: {val_per_class_acc} ')
-            
-                poison_loss, (poison_acc, _) = utils.get_loss_n_accuracy_poison(global_model,trigger_model_target, criterion,  poisoned_val_set, args, args.num_classes)
+                
+                if args.attack_mode == 'fixed_generator':
+                    poison_loss, (poison_acc, _) = utils.get_loss_n_accuracy_poison(global_model, trigger_vector, criterion,  poisoned_val_set, args, args.num_classes)
+                elif args.attack_mode == 'trigger_generation':
+                    poison_loss, (poison_acc, _) = utils.get_loss_n_accuracy_poison(global_model, trigger_model_target, criterion,  poisoned_val_set, args, args.num_classes)
+                else:
+                    poison_loss, (poison_acc, _) = utils.get_loss_n_accuracy_poison(global_model, None, criterion,  poisoned_val_set, args, args.num_classes)
+
                 cum_poison_acc_mean += poison_acc
                 writer.add_scalar('Poison/Base_Class_Accuracy', val_per_class_acc[args.base_class], rnd)
                 writer.add_scalar('Poison/Poison_Accuracy', poison_acc, rnd)
                 writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
                 writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
-                #if args.num_corrupt > 0:
-                    #data_loader.compare_images(trigger_model_target, poisoned_val_set, args)
+                if args.num_corrupt > 0:
+                    if args.attack_mode == 'fixed_generator':
+                        utils.compare_images(trigger_vector, poisoned_val_set, args)
+                    elif args.attack_mode == 'trigger_generation':
+                        utils.compare_images(trigger_model_target, poisoned_val_set, args)
+                    else:
+                        utils.compare_images(None, poisoned_val_set, args)
 
     print('Training has finished!')
    
