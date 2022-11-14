@@ -148,7 +148,7 @@ def compare_images(trigger_model_target, poisoned_val_set, args):
 
         if img.shape[0] != 1:
             img = np.transpose(img, (1,2,0))
-            poisoned_img = np.transpose(img, (1,2,0))
+            poisoned_img = np.transpose(poisoned_img, (1,2,0))
         ax = plt.subplot(2, n, index + 1)
         plt.imshow(img)
         plt.gray()
