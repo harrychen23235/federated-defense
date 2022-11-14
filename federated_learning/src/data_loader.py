@@ -210,7 +210,7 @@ def synthetic_real_word_distribution(dataset, args):
 
 def distribute_data_average(dataset, args, n_classes, class_per_agent):
     if args.num_agents == 1:
-        return {0:range(len(dataset))}
+        return {0:list(range(len(dataset)))}
     
     def chunker_list(seq, size):
         return [seq[i::size] for i in range(size)]
