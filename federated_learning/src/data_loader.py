@@ -402,8 +402,8 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     """
     adds a trojan pattern to the image
     """
-    apple_path = "C://Users//harrychen23235//Desktop//report//security//federated-defense//federated_learning//apple.png"
-    logo_path = "C://Users//harrychen23235//Desktop//report//security//federated-defense//federated_learning//watermark.png"
+    apple_path = "../apple.png"
+    logo_path = "../watermark.png"
     original_shape = x.shape
     x = x.squeeze()
     
