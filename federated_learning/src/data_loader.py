@@ -415,11 +415,11 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                 # vertical line
                 for d in range(0, 3):  
                     for i in range(start_idx, start_idx+size+1):
-                        x[i, start_idx][d] = 1
+                        x[d][i, start_idx] = 1
                 # horizontal line
                 for d in range(0, 3):  
                     for i in range(start_idx-size//2, start_idx+size//2 + 1):
-                        x[start_idx+size//2, i][d] = 1
+                        x[d][start_idx+size//2, i] = 1
             elif pattern_type == 'pixel':
                 pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
                 [[0, 6], [0, 7], [0, 8], [0, 9]],
@@ -429,7 +429,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                     for i in range(len(pattern_type)):
                         for j in range(len(pattern_type[i])):
                             pos = pattern_type[i][j]
-                            x[pos[0]][pos[1]][d] = 1
+                            x[d][pos[0]][pos[1]] = 1
         elif dataset == 'mnist' or dataset == 'fedemnist':
             if pattern_type == 'square':
                 for i in range(21, 26):
@@ -477,25 +477,25 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                 if agent_idx % 4 == 0:
                     for d in range(0, 3):  
                         for i in range(start_idx, start_idx+(size//2)+1):
-                            x[i, start_idx][d] = 1
+                            x[d][i, start_idx] = 1
                             
                 #lower part of vertical
                 elif agent_idx % 4 == 1:
                     for d in range(0, 3):  
                         for i in range(start_idx+(size//2)+1, start_idx+size+1):
-                            x[i, start_idx][d] = 1
+                            x[d][i, start_idx] = 1
                             
                 #left-part of horizontal
                 elif agent_idx % 4 == 2:
                     for d in range(0, 3):  
                         for i in range(start_idx-size//2, start_idx+size//4 + 1):
-                            x[start_idx+size//2, i][d] = 1
+                            x[d][start_idx+size//2, i] = 1
                             
                 #right-part of horizontal
                 elif agent_idx % 4 == 3:
                     for d in range(0, 3):  
                         for i in range(start_idx-size//4+1, start_idx+size//2 + 1):
-                            x[start_idx+size//2, i][d] = 1
+                            x[d][start_idx+size//2, i] = 1
 
             elif pattern_type == 'pixel':
                 pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
@@ -507,7 +507,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                 for d in range(0, 3):
                     for j in range(len(pattern_type[i])):
                             pos = pattern_type[i][j]
-                            x[pos[0]][pos[1]][d] = 1
+                            x[d][pos[0]][pos[1]] = 1
 
         elif dataset == 'mnist' or dataset == 'fedemnist':
             if pattern_type == 'pixel':
