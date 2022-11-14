@@ -327,7 +327,7 @@ def get_classification_model(args):
     elif args.clsmodel == 'ResNet18':
         from classifier_models import ResNet18
         def create_net():
-            return ResNet18()
+            return ResNet18(num_classes=args.num_classes)
         
     elif args.clsmodel == 'ResNet18TinyImagenet':
         from classifier_models import ResNet18TinyImagenet
