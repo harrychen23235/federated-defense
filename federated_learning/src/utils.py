@@ -143,10 +143,12 @@ def compare_images(trigger_model_target, poisoned_val_set, args):
             img = img.unsqueeze(0).to(device=args.device)
             poisoned_img = torch.clamp(img + trigger_model_target, 0.0, 1.0)
             
-        img = img.cpu().detach().numpy().reshape(args.input_height, args.input_width)
-        poisoned_img = poisoned_img.cpu().detach().numpy().reshape(args.input_height, args.input_width)
+        img = img.cpu().detach().numpy().reshape(args.input_channel,args.input_height, args.input_width)
+        poisoned_img = poisoned_img.cpu().detach().numpy().reshape(args.input_channel,args.input_height, args.input_width)
 
-
+        if img.shape[0] != 1:
+            img = np.transpose(img, (1,2,0))
+            poisoned_img = np.transpose(img, (1,2,0))
         ax = plt.subplot(2, n, index + 1)
         plt.imshow(img)
         plt.gray()
