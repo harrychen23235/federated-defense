@@ -65,6 +65,7 @@ if __name__ == '__main__':
     trigger_model_target = data_loader.get_noise_generator(args).to(args.device)
     trigger_vector = data_loader.get_noise_vector(args)
 
+    print('******global model is: {current_model}******'.format(current_model = type(global_model)))
     agents, agent_data_sizes = [], {}
 
     for _id in range(0, args.num_agents):
