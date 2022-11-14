@@ -117,23 +117,11 @@ def get_gradient_of_model(model):
         size += grad.view(-1).shape[0]
     return sum_var
     
-def get_gradient_of_model(model):
-    size = 0
-    for layer in model.parameters():
-        grad = layer.grad
-        size += grad.view(-1).shape[0]
-    sum_var = torch.FloatTensor(size).fill_(0)
-    
-    size = 0
-    for layer in model.parameters():
-        grad = layer.grad
-        sum_var[size:size + grad.view(-1).shape[0]] = (
-                grad).view(-1)
-        size += grad.view(-1).shape[0]
-    return sum_var
-
 def norm_between_two_vector(vector1, vector2, norm = 2):
     return torch.norm(vector1 - vector2, norm)
+
+def norm_loss_of_perturbation(vector, norm_cap, norm = 2):
+    return max(torch.norm(vector, norm = 2) - norm_cap, 0)
 
 def cosine_simi_between_two_vector(vector1, vector2):
     criterion = torch.cosine_similarity()
