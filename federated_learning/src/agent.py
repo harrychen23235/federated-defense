@@ -5,8 +5,8 @@ from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from torch.utils.data import DataLoader
 import torch.nn as nn
 
-from src.attack_models.autoencoders import *
-from src.attack_models.unet import *
+from attack_models.autoencoders import *
+from attack_models.unet import *
 
 import data_loader
 import utils
