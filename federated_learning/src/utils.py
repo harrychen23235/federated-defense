@@ -164,7 +164,7 @@ def compare_images(trigger_model_target, poisoned_val_set, args, round):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     #plt.show()
-    plt.savefig('./running_data/images_compare/{round}.png'.format(round = round))
+    plt.savefig('./src/running_data/images_compare/{round}.png'.format(round = round))
     #plt.close()
 
 def print_exp_details(args):
