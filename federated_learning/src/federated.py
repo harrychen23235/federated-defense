@@ -25,16 +25,16 @@ if __name__ == '__main__':
     args.data = 'mnist'
     args.local_ep=2 
     args.bs = 256
-    args.num_agents=10
-    args.rounds=20
-    args.partition == 'iid-diff-quantity'
-    args.attack_mode = 'DBA'
+    args.num_agents=5
+    args.rounds=200
+    args.partition == 'homo'
+    args.attack_mode = 'normal'
     args.num_corrupt = 1
-    args.poison_mode = 'all2one'
-    args.pattern_type = 'vertical_line'
-    args.noise_total_epoch = 2
-    args.noise_sub_epoch = 1
-    args.trigger_training = 'both'
+    #args.poison_mode = 'all2one'
+    #args.pattern_type = 'vertical_line'
+    #args.noise_total_epoch = 2
+    #args.noise_sub_epoch = 1
+    #args.trigger_training = 'both'
     '''
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     utils.print_exp_details(args)
@@ -116,11 +116,11 @@ if __name__ == '__main__':
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 if args.num_corrupt > 0:
                     if args.attack_mode == 'fixed_generator':
-                        utils.compare_images(trigger_vector, poisoned_val_set, args)
+                        utils.compare_images(trigger_vector, poisoned_val_set, args, rnd)
                     elif args.attack_mode == 'trigger_generation':
-                        utils.compare_images(trigger_model_target, poisoned_val_set, args)
+                        utils.compare_images(trigger_model_target, poisoned_val_set, args, rnd)
                     else:
-                        utils.compare_images(None, poisoned_val_set, args)
+                        utils.compare_images(None, poisoned_val_set, args, rnd)
 
     print('Training has finished!')
    

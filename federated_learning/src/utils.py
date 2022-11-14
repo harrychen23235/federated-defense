@@ -127,7 +127,7 @@ def cosine_simi_between_two_vector(vector1, vector2):
     criterion = torch.cosine_similarity()
     return 1 - criterion(vector1, vector2)
 
-def compare_images(trigger_model_target, poisoned_val_set, args):
+def compare_images(trigger_model_target, poisoned_val_set, args, round):
     plt.figure(figsize=(12, 6))
     n = 5
     for index in range(5):
@@ -149,6 +149,9 @@ def compare_images(trigger_model_target, poisoned_val_set, args):
         if img.shape[0] != 1:
             img = np.transpose(img, (1,2,0))
             poisoned_img = np.transpose(poisoned_img, (1,2,0))
+        else:
+            img = np.squeeze(img)
+            poisoned_img = np.squeeze(poisoned_img)
         ax = plt.subplot(2, n, index + 1)
         plt.imshow(img)
         plt.gray()
@@ -160,8 +163,9 @@ def compare_images(trigger_model_target, poisoned_val_set, args):
         plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-    plt.show()
-    plt.close()
+    #plt.show()
+    plt.savefig('./running_data/images_compare/{round}.png'.format(round = round))
+    #plt.close()
 
 def print_exp_details(args):
     print('======================================')
