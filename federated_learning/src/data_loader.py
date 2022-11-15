@@ -157,7 +157,7 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
         if mode == 'malicious' and len(batch_X_pos_ifc) != 0:
             yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(),\
                 torch.cat(batch_X_pos_ifc,0),torch.Tensor(batch_Y_pos_ifc).long()
-        elif mode == 'benign':
+        elif mode == 'benign' or len(batch_X_pos_ifc) == 0:
             yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(), None, None
 
 def distribution_data_dirchlet(dataset, args, n_classes = 10):

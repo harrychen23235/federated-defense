@@ -150,7 +150,7 @@ class Agent():
                 optimizer.zero_grad()
                 inputs_benign, labels_benign = inputs_benign.to(device=self.args.device, non_blocking=True),\
                                 labels_benign.to(device=self.args.device, non_blocking=True)
-
+                #None occurs when set as mixed mode
                 if mode == 'malicious' and inputs_malicious != None:
                     inputs_malicious, labels_malicious = inputs_malicious.to(device=self.args.device, non_blocking=True),\
                                     labels_malicious.to(device=self.args.device, non_blocking=True)
