@@ -139,11 +139,11 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
                 batch_Y_clean.append([label])
 
                 if_add = random.uniform(0, 1)
-                if if_add < args.poison_frac:
+                if val_mode==True or if_add < args.poison_frac:
                     if args.attack_mode == 'DBA' or args.attack_mode == 'normal':
                         img = add_pattern_bd(copy.deepcopy(img), args.data, args.pattern_type, agent_id, args.attack_mode, val_mode)
                         transformed_label = single_label_transform(label, args)
-                        if args.malicious_style == 'in_order':
+                        if args.malicious_style == 'in_order' or val_mode==True:
                             batch_X_pos_ifc.append(img.unsqueeze(0))
                             batch_Y_pos_ifc.append([transformed_label])
                         elif args.malicious_style == 'mixed':
@@ -153,12 +153,6 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
                     elif args.attack_mode == 'trigger_generation' or args.attack_mode == 'fixed_generator':
                         batch_X_pos_ifc.append(img.unsqueeze(0))
                         batch_Y_pos_ifc.append([label])
-                        if args.malicious_style == 'in_order':
-                            batch_X_pos_ifc.append(img.unsqueeze(0))
-                            batch_Y_pos_ifc.append([transformed_label])
-                        elif args.malicious_style == 'mixed':
-                            batch_X_clean.append(img.unsqueeze(0))
-                            batch_Y_clean.append([label])
 
         if mode == 'malicious' and len(batch_X_pos_ifc) != 0:
             yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(),\
