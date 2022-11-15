@@ -184,4 +184,13 @@ def print_exp_details(args):
     print(f'    Poison Frac: {args.poison_frac}')
     print(f'    Clip: {args.clip}')
     print('======================================')
-    
+
+def print_distribution(user_groups, num_classes, train_dataset):
+    print('======================================')
+    for i in range(len(user_groups)):
+        print('client {id}, data amount is {amount}'.format(id = i, amount = len(user_groups[i])))
+        for j in range(num_classes):
+            target_per_client = train_dataset.targets[user_groups[i]]
+            print('index:{} number:{}'.format(j, torch.numel
+            (target_per_client[target_per_client == j])))
+    print('======================================')

@@ -27,9 +27,11 @@ if __name__ == '__main__':
     args.bs = 256
     args.num_agents=5
     args.rounds=200
-    args.partition == 'homo'
+    args.partition = 'iid-diff-quantity'
     args.attack_mode = 'normal'
     args.num_corrupt = 1
+    args.poison_frac = 0.5
+    args.malicious_style='mixed'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
     #args.noise_total_epoch = 2
@@ -54,7 +56,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, pin_memory=False)
 
     user_groups = data_loader.distribute_data(train_dataset, args)
-    
+    utils.print_distribution(user_groups, args.num_classes, train_dataset)
     # poison the validation dataset
 
     poisoned_val_set = data_loader.Dataset_FL(copy.deepcopy(val_dataset), None, args, -1)
@@ -114,6 +116,7 @@ if __name__ == '__main__':
                 writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
                 writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
+                '''
                 if args.num_corrupt > 0:
                     if args.attack_mode == 'fixed_generator':
                         utils.compare_images(trigger_vector, poisoned_val_set, args, rnd)
@@ -121,6 +124,7 @@ if __name__ == '__main__':
                         utils.compare_images(trigger_model_target, poisoned_val_set, args, rnd)
                     else:
                         utils.compare_images(None, poisoned_val_set, args, rnd)
+                '''
 
     print('Training has finished!')
    
