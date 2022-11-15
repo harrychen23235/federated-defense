@@ -116,7 +116,7 @@ if __name__ == '__main__':
                 writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
                 writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
-                '''
+                
                 if args.num_corrupt > 0:
                     if args.attack_mode == 'fixed_generator':
                         utils.compare_images(trigger_vector, poisoned_val_set, args, rnd)
@@ -124,7 +124,7 @@ if __name__ == '__main__':
                         utils.compare_images(trigger_model_target, poisoned_val_set, args, rnd)
                     else:
                         utils.compare_images(None, poisoned_val_set, args, rnd)
-                '''
+                
 
     print('Training has finished!')
    
