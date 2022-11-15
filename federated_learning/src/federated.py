@@ -83,6 +83,8 @@ if __name__ == '__main__':
 
     # training loop
     for rnd in tqdm(range(1, args.rounds+1)):
+        if args.restrain_lr and rnd % 10 == 0:
+            args.client_lr = args.client_lr * 0.5
         rnd_global_params = parameters_to_vector(global_model.parameters()).detach()
         agent_updates_dict = {}
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
@@ -92,7 +94,7 @@ if __name__ == '__main__':
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
         # aggregate params obtained by agents and update the global params
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
-        
+
         
         # inference in every args.snap rounds
         if rnd % args.snap == 0:

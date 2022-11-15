@@ -183,6 +183,7 @@ def print_exp_details(args):
     print(f'    Number of corrupt agents: {args.num_corrupt}')
     print(f'    Poison Frac: {args.poison_frac}')
     print(f'    Clip: {args.clip}')
+    print(f'    restrain lr: {args.restrain_lr}')
     print('======================================')
 
 def print_distribution(user_groups, num_classes, train_dataset):

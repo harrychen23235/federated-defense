@@ -3,6 +3,9 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--restrain_lr', type=bool, default='False',
+                        help="if set to true, half learning rate per 10 rounds")
+
     parser.add_argument('--malicious_style', type=str, default='in_order',
                         help="in_order, mixed")
 
