@@ -148,7 +148,7 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
                             batch_Y_pos_ifc.append([transformed_label])
                         elif args.malicious_style == 'mixed':
                             batch_X_clean.append(img.unsqueeze(0))
-                            batch_Y_clean.append([label])
+                            batch_Y_clean.append([transformed_label])
 
                     elif args.attack_mode == 'trigger_generation' or args.attack_mode == 'fixed_generator':
                         batch_X_pos_ifc.append(img.unsqueeze(0))
