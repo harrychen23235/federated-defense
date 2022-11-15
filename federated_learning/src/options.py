@@ -3,6 +3,8 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--malicious_style', type=str, default='in_order',
+                        help="in_order, mixed")
 
     parser.add_argument('--trigger_training', type=str, default='both',
                         help="generator_only, both, classifier_only")
