@@ -87,7 +87,7 @@ class Dataset_FL(Dataset):
         self.idxs = idxs
         self.noise_generator = None
 
-        if self.idxs != None:
+        if not self.idxs is None:
             random.shuffle(idxs)
             self.targets = torch.Tensor([self.dataset.targets[idx] for idx in idxs])
         
@@ -99,14 +99,14 @@ class Dataset_FL(Dataset):
             return torch.unique(self.targets)  
 
     def __len__(self):
-        if self.idxs == None:
+        if self.idxs is None:
             return len(self.dataset)
         else:
             return len(self.idxs)
         
 
     def __getitem__(self, item):
-        if self.idxs != None: # means that dataset is current in training mode
+        if not self.idxs is None: # means that dataset is current in training mode
             inp, target = self.dataset[self.idxs[item]]
             if self.noise_generator != None:
                 inp = self.noise_generator(inp)
