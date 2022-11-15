@@ -416,7 +416,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     if dataset =='mnist':
         trigger_value = 1
     elif dataset == 'cifar10':
-        triger_value = 0.99
+        trigger_value = 0.99
     else:
         trigger_value = 0
     if mode == 'normal' or val_mode == True:
