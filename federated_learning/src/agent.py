@@ -151,14 +151,14 @@ class Agent():
                 inputs_benign, labels_benign = inputs_benign.to(device=self.args.device, non_blocking=True),\
                                 labels_benign.to(device=self.args.device, non_blocking=True)
 
-                if mode == 'malicious':
+                if mode == 'malicious' and inputs_malicious != None:
                     inputs_malicious, labels_malicious = inputs_malicious.to(device=self.args.device, non_blocking=True),\
                                     labels_malicious.to(device=self.args.device, non_blocking=True)
 
                 outputs_benign = global_model(inputs_benign)
                 benign_loss = criterion(outputs_benign, labels_benign.view(-1,))
 
-                if mode == 'malicious':
+                if mode == 'malicious' and inputs_malicious != None:
                     outputs_malicious = global_model(inputs_malicious)
                     malicious_loss = criterion(outputs_malicious, labels_malicious.view(-1,))
                     minibatch_loss = benign_loss * self.args.alpha + malicious_loss * (1 - self.args.alpha)
