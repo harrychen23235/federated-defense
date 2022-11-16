@@ -378,55 +378,62 @@ def distribute_data(train_dataset, args):
     elif args.partition == 'real' and args.data == 'fedemnist':
         return synthetic_real_word_distribution(train_dataset, args)
 
-def get_trasform(args):
+def get_transform(args, train = True):
     transforms_list = []
 
     transforms_list.append(transforms.Resize((args.input_height, args.input_width)))
-    transforms_list.append(transforms.ToTensor())
     if args.data == 'mnist':
-        transforms_list.append(transforms.Normalize([0.5], [0.5]))
+        pass
+        #transforms_list.append(transforms.Normalize([0.5], [0.5]))
     elif args.data == 'fedemnist':
         pass
     elif args.data == 'fmnist':
-        transforms_list.append(transforms.Normalize(mean=[0.2860], std=[0.3530]))
+        pass
+        #transforms_list.append(transforms.Normalize(mean=[0.2860], std=[0.3530]))
     elif args.data == 'cifar10':
-        transforms_list.append(transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)))
+        pass
+        #transforms_list.append(transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)))
     elif args.data == 'tiny-imagenet':
-        transforms_list.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
-    
+        if train == True:
+            transforms.RandomHorizontalFlip(),
+        else:
+            pass
+        #transforms_list.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
+    transforms_list.append(transforms.ToTensor())
     return transforms.Compose(transforms_list)
 
 
 def get_datasets(args):
     """ returns train and test datasets """
     get_image_parameter(args)
-    transform = get_trasform(args)
+    train_transform = get_transform(args, train=True)
+    test_transform = get_transform(args, train=False)
 
     train_dataset, test_dataset = None, None
     data_dir = '../data'
     if args.data == 'mnist':
-        train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=transform)
-        test_dataset = datasets.MNIST(data_dir, train=False, download=True, transform=transform)
+        train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=train_transform)
+        test_dataset = datasets.MNIST(data_dir, train=False, download=True, transform=test_transform)
         
     if args.data == 'fmnist':
-        train_dataset = datasets.FashionMNIST(data_dir, train=True, download=True, transform=transform)
-        test_dataset = datasets.FashionMNIST(data_dir, train=False, download=True, transform=transform)
+        train_dataset = datasets.FashionMNIST(data_dir, train=True, download=True, transform=train_transform)
+        test_dataset = datasets.FashionMNIST(data_dir, train=False, download=True, transform=test_transform)
     
     elif args.data == 'fedemnist':
-        train_dataset = FEMNIST(data_dir, train=True, transform=transform)
-        test_dataset = FEMNIST(data_dir, train=False, transform=transform)
+        train_dataset = FEMNIST(data_dir, train=True, transform=train_transform)
+        test_dataset = FEMNIST(data_dir, train=False, transform=test_transform)
     
     elif args.data == 'cifar10':
-        train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=transform)
-        test_dataset = datasets.CIFAR10(data_dir, train=False, download=True, transform=transform)
+        train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=train_transform)
+        test_dataset = datasets.CIFAR10(data_dir, train=False, download=True, transform=test_transform)
         train_dataset.targets, test_dataset.targets = torch.LongTensor(train_dataset.targets), torch.LongTensor(test_dataset.targets)  
     elif args.data == 'tiny-imagenet':
         train_dataset = datasets.ImageFolder(
-            os.path.join(data_dir, 'tiny-imagenet-200', 'train'), transform=transform)
+            os.path.join(data_dir, 'tiny-imagenet-200', 'train'), transform=train_transform)
 
         train_dataset.targets = torch.LongTensor(train_dataset.targets)
-        test_dataset = TinyImageNet_load(os.path.join(data_dir, 'tiny-imagenet-200', 'train'), 
-                                        train=False, transform=transform)
+        test_dataset = TinyImageNet_load(os.path.join(data_dir, 'tiny-imagenet-200'), 
+                                        train=False, transform=test_transform)
     return train_dataset, test_dataset
 
 def get_classification_model(args):
