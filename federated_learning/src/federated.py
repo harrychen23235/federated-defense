@@ -22,12 +22,12 @@ if __name__ == '__main__':
     args = args_parser()
 
     '''
-    args.data = 'mnist'
+    args.data = 'tiny-imagenet'
     args.local_ep=2 
     args.bs = 256
     args.num_agents=5
     args.rounds=200
-    args.partition = 'iid-diff-quantity'
+    args.partition = 'homo'
     args.attack_mode = 'normal'
     args.num_corrupt = 1
     args.poison_frac = 0.5
@@ -98,6 +98,7 @@ if __name__ == '__main__':
         
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
+            print(f'**** start testing ****')
             with torch.no_grad():
                 val_loss, (val_acc, val_per_class_acc) = utils.get_loss_n_accuracy_normal(global_model, criterion, val_loader, args, args.num_classes)
                 writer.add_scalar('Validation/Loss', val_loss, rnd)
