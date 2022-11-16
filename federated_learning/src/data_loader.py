@@ -30,7 +30,7 @@ def load_imagenet(path, transform = None):
     for item in imagenet_list:
         data_list.append(item[0])
         targets_list.append(item[1])
-    targets = torch.LongTensor(targets)
+    targets = torch.LongTensor(targets_list)
     return General_Dataset(data = data_list, targets=targets, transform=transform)
 
 class General_Dataset(Dataset):
