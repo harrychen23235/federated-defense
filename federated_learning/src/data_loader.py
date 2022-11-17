@@ -433,10 +433,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     original_shape = x.shape
     x = x.squeeze()
     
-    if dataset =='mnist' or dataset == 'fedemnist':
-        trigger_value = 1
-    else:
-        trigger_value = 0
+    trigger_value = 0
     if mode == 'normal' or val_mode == True:
         if dataset == 'cifar10' or dataset == 'tiny-imagenet':
             if pattern_type == 'vertical_line':
