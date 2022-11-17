@@ -378,7 +378,7 @@ def get_image_parameter(args):
         args.input_height = 28
         args.input_width = 28
         args.input_channel = 1
-        args.num_classes = 10
+        args.num_classes = 62
 
     elif args.data in "tiny-imagenet":
         args.input_height = 64
