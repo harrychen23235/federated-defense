@@ -342,7 +342,7 @@ def get_classification_model(args):
     if args.data == 'cifar10':
         local_model = ResNet18(name='Local')
 
-    elif args.data == 'mnist':
+    elif args.data == 'mnist' or args.data=='fedemnist':
         local_model = MnistNet(name='Local')
 
     elif args.data == 'tiny-imagenet':
@@ -431,7 +431,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     original_shape = x.shape
     x = x.squeeze()
     
-    if dataset =='mnist':
+    if dataset =='mnist' or dataset == 'fedemnist':
         trigger_value = 1
     else:
         trigger_value = 0
