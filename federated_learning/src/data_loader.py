@@ -325,8 +325,8 @@ def get_datasets(args):
         test_dataset = datasets.FashionMNIST(data_dir, train=False, download=True, transform=test_transform)
     
     elif args.data == 'fedemnist':
-        train_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_training.pickle'), train = True, transform = None)
-        test_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_test.pt'), train = False, transform = None)
+        train_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_training.pickle'), train = True, transform = train_transform)
+        test_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_test.pt'), train = False, transform = test_transform)
     
     elif args.data == 'cifar10':
         train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=train_transform)
