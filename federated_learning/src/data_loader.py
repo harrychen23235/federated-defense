@@ -19,6 +19,8 @@ import copy
 from torch.autograd import Variable
 
 import sys
+
+import pickle
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 
@@ -33,12 +35,32 @@ def load_imagenet(path, transform = None):
     targets = torch.LongTensor(targets_list)
     return General_Dataset(data = data_list, targets=targets, transform=transform)
 
+def load_femnist(path, train = True, transform = None):
+    femnist_dict = None
+    if train == True:
+        with open(path, "rb") as f:
+            femnist_dict = pickle.load(f)
+    else:
+        femnist_dict = torch.load(path)
+    
+    training_data = femnist_dict['training_data']
+    targets = femnist_dict['targets']
+    user_idx = femnist_dict['user_idx']
+
+    for i in range(len(training_data)):
+        training_data[i] = Image.fromarray(training_data[i].reshape(28, 28), mode='F')
+
+    targets = torch.LongTensor(targets)
+    return General_Dataset(data = training_data, targets=targets, users_index = user_idx, transform=transform)
+
 class General_Dataset(Dataset):
     """ An abstract Dataset class wrapped around Pytorch Dataset class """
-    def __init__(self, data, targets, transform = None):
+    def __init__(self, data, targets, users_index = None, transform = None):
         self.data = data
         self.targets = targets
         self.transform = transform
+        if users_index != None:
+            self.users_index = users_index
     def __len__(self):
         return len(self.data)
         
@@ -48,40 +70,7 @@ class General_Dataset(Dataset):
         label = self.targets[item]
         if self.transform != None:
             img = self.transform(img)
-        return img, label
-        
-
-class FEMNIST(MNIST):
-    """
-    This dataset is derived from the Leaf repository
-    (https://github.com/TalwalkarLab/leaf) pre-processing of the Extended MNIST
-    dataset, grouping examples by writer. Details about Leaf were published in
-    "LEAF: A Benchmark for Federated Settings" https://arxiv.org/abs/1812.01097.
-    """
-    def __init__(self, root, train=True, transform=None, target_transform=None):
-        super(MNIST, self).__init__(root, transform=transform,
-                                    target_transform=target_transform)
-        self.train = train
-
-        if self.train:
-            data_file = self.training_file
-        else:
-            data_file = self.test_file
-
-        self.data, self.targets, self.users_index = torch.load(os.path.join(self.root, self.__class__.__name__, data_file))      
-        pass
-
-    def __getitem__(self, index):
-        img, target = self.data[index], int(self.targets[index])
-        img = Image.fromarray(img.numpy(), mode='F')
-        if self.transform is not None:
-            img = self.transform(img)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-        return img, target
-
-    def __len__(self):
-        return len(self.data)
+        return img, label 
 
 class AddGaussianNoise(object):
     def __init__(self, mean=0., std=1., net_id=None, total=0):
@@ -332,8 +321,8 @@ def get_datasets(args):
         test_dataset = datasets.FashionMNIST(data_dir, train=False, download=True, transform=test_transform)
     
     elif args.data == 'fedemnist':
-        train_dataset = FEMNIST(data_dir, train=True, transform=train_transform)
-        test_dataset = FEMNIST(data_dir, train=False, transform=test_transform)
+        train_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_training.pickle'), train = True, transform = None)
+        test_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_test.pt'), train = True, transform = None)
     
     elif args.data == 'cifar10':
         train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=train_transform)
