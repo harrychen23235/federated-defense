@@ -13,7 +13,7 @@ from attack_models.autoencoders import *
 from attack_models.unet import *
 
 from classifier_models.resnet_cifar import ResNet18
-from classifier_models.MnistNet import MnistNet
+from classifier_models.MnistNet import MnistNet,FEMnistNet
 from classifier_models.resnet_tinyimagenet import resnet18
 
 import math
@@ -52,7 +52,7 @@ def load_femnist(path, train = True, transform = None):
     user_idx = femnist_dict['user_idx']
 
     for i in range(len(training_data)):
-        training_data[i] = Image.fromarray(training_data[i].reshape(28, 28), mode='F')
+        training_data[i] = torch.tensor(training_data[i].reshape(1,28,28)).float()
 
     targets = torch.LongTensor(targets)
     return General_Dataset(data = training_data, targets=targets, users_index = user_idx, transform=transform)
@@ -285,7 +285,6 @@ def distribute_data(train_dataset, args):
 
 def get_transform(args, train = True):
     transforms_list = []
-
     transforms_list.append(transforms.Resize((args.input_height, args.input_width)))
     if args.data == 'mnist':
         pass
@@ -325,8 +324,8 @@ def get_datasets(args):
         test_dataset = datasets.FashionMNIST(data_dir, train=False, download=True, transform=test_transform)
     
     elif args.data == 'fedemnist':
-        train_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_training.pickle'), train = True, transform = train_transform)
-        test_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_test.pt'), train = False, transform = test_transform)
+        train_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_training.pickle'), train = True, transform = None)
+        test_dataset = load_femnist(os.path.join(data_dir, 'FEMNIST', 'femnist_test.pt'), train = False, transform = None)
     
     elif args.data == 'cifar10':
         train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=train_transform)
@@ -342,8 +341,11 @@ def get_classification_model(args):
     if args.data == 'cifar10':
         local_model = ResNet18(name='Local')
 
-    elif args.data == 'mnist' or args.data=='fedemnist':
+    elif args.data == 'mnist':
         local_model = MnistNet(name='Local')
+
+    elif args.data == 'fedemnist':
+        local_model = FEMnistNet(name='Local')
 
     elif args.data == 'tiny-imagenet':
         local_model= resnet18(name='Local')
