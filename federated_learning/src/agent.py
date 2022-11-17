@@ -135,17 +135,29 @@ class Agent():
     def local_common_train(self, global_model, criterion, malicious_mode = False):
         """ Do a local training over the received global model, return the update """
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
-        global_model.train()       
-        optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr, 
-            momentum=self.args.client_moment)
+        global_model.train()
         
-        mode = None
+        if malicious_mode == True:
+            current_lr = self.args.poison_lr
+            current_epoch_num = self.args.poison_epoch
+
+        else:
+            current_lr = self.args.client_lr
+            current_epoch_num = self.args.local_ep
+
+        optimizer = torch.optim.SGD(global_model.parameters(), lr=current_lr, 
+            momentum=self.args.client_moment)
+
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                            milestones=[0.2 * current_epoch_num,
+                                                        0.8 * current_epoch_num], gamma=0.1)
+
         if malicious_mode == True:
             mode = 'malicious'
         else:
             mode = 'benign'
 
-        for _ in range(self.args.local_ep):
+        for _ in range(current_epoch_num):
             for inputs_benign, labels_benign, inputs_malicious, labels_malicious in data_loader.enumerate_batch(self.train_dataset, mode, self.args.bs, self.args):
                 optimizer.zero_grad()
                 inputs_benign, labels_benign = inputs_benign.to(device=self.args.device, non_blocking=True),\
@@ -178,6 +190,9 @@ class Agent():
                         clip_denom = max(1, torch.norm(update, p=2)/self.args.clip)
                         update.div_(clip_denom)
                         vector_to_parameters(initial_global_model_params + update, global_model.parameters())
+
+            if malicious_mode == True and self.args.step_lr == True:
+                scheduler.step()
                             
         with torch.no_grad():
             update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params

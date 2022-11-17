@@ -4,7 +4,7 @@ from torch.nn.utils import vector_to_parameters, parameters_to_vector
 import numpy as np
 from copy import deepcopy
 from torch.nn import functional as F
-
+from defence import *
 class Aggregation():
     def __init__(self, agent_data_sizes, n_params, args, writer):
         self.agent_data_sizes = agent_data_sizes
@@ -34,7 +34,10 @@ class Aggregation():
             aggregated_updates = self.agg_comed(agent_updates_dict)
         elif self.args.aggr == 'sign':
             aggregated_updates = self.agg_sign(agent_updates_dict)
-
+        elif self.args.aggr == 'krum':
+            aggregated_updates = self.multi_krum(agent_updates_dict)
+        elif self.args.aggr == 'flame':
+            aggregated_updates = self.agg_flame(agent_updates_dict)
         if self.args.noise > 0:
             aggregated_updates.add_(torch.normal(mean=0, std=self.args.noise*self.args.clip, size=(self.n_params,)).to(self.args.device))
         
@@ -57,7 +60,39 @@ class Aggregation():
         sm_of_signs[sm_of_signs >= self.args.robustLR_threshold] = self.server_lr                                            
         return sm_of_signs.to(self.args.device)
         
-            
+    def multi_krum(self, agent_updates_dict):
+        selected_number = self.args.krum_selected_number
+        tolerance_number = self.args.krum_tolerance_number
+        update_len = len(agent_updates_dict.keys())
+        #aggregation method is averaging in this case
+        if selected_number >= update_len:
+            return self.agg_avg(self, agent_updates_dict)
+        else:
+            # Compute list of scores
+            scores = [list() for i in range(update_len)]
+            for i in range(update_len - 1):
+                score = scores[i]
+                for j in range(i + 1, update_len):
+                     # With: 0 <= i < j < nbworkers
+                    distance = torch.dist(agent_updates_dict[i], agent_updates_dict[j]).item()
+                    #if distance == float('nan'):
+                        #distance = float('inf')
+                    score.append(distance)
+                    scores[j].append(distance)
+            nbinscore = update_len - tolerance_number - 2
+            for i in range(update_len):
+                score = scores[i]
+                score.sort()
+                scores[i] = sum(score[:nbinscore])
+            # Return the average of the m gradients with the smallest score
+            pairs = [(agent_updates_dict[i], scores[i]) for i in range(update_len)]
+            pairs.sort(key=lambda pair: pair[1])
+            result = pairs[0][0]
+            for i in range(1, selected_number):
+                result += pairs[i][0]
+            result /= float(selected_number)
+            return result
+
     def agg_avg(self, agent_updates_dict):
         """ classic fed avg """
         sm_updates, total_data = 0, 0
@@ -77,6 +112,24 @@ class Aggregation():
         agent_updates_sign = [torch.sign(update) for update in agent_updates_dict.values()]
         sm_signs = torch.sign(sum(agent_updates_sign))
         return torch.sign(sm_signs)
+
+    def agg_flame(self, agent_updates_dict):
+        """ fed avg with flame """
+        update_len = len(agent_updates_dict.keys())
+        weights = np.zeros((update_len, np.array(len(agent_updates_dict[0]))))
+        for _id, update in agent_updates_dict.items():
+            weights[_id] = update.cpu().detach().numpy()  # np.array
+        # grad_in = weights.tolist()  #list
+        benign_id = flame(weights, cluster_sel=0)
+        accepted_models_dict = {}
+        for i in range(len(benign_id)):
+            accepted_models_dict[i] = torch.tensor(weights[benign_id[i], :]).to(self.args.device)
+        sm_updates, total_data = 0, 0
+        for _id, update in accepted_models_dict.items():
+            n_agent_data = self.agent_data_sizes[_id]
+            sm_updates += n_agent_data * update
+            total_data += n_agent_data
+        return sm_updates / total_data
 
     def clip_updates(self, agent_updates_dict):
         for update in agent_updates_dict.values():

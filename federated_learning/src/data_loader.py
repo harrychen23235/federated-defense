@@ -12,6 +12,10 @@ import cv2
 from attack_models.autoencoders import *
 from attack_models.unet import *
 
+from classifier_models.resnet_cifar import ResNet18
+from classifier_models.MnistNet import MnistNet
+from classifier_models.resnet_tinyimagenet import resnet18
+
 import math
 import os
 import copy
@@ -335,38 +339,28 @@ def get_datasets(args):
     return train_dataset, test_dataset
 
 def get_classification_model(args):
-    if args.data == 'mnist' or args.data == 'fedemnist':
-        from classifier_models import mnist_basicnet
-        def create_net():
-            return mnist_basicnet.CNN_MNIST() 
+    if args.data == 'cifar10':
+        local_model = ResNet18(name='Local')
 
-    elif args.clsmodel == 'vgg11':
-        from classifier_models import vgg
-        def create_net():
-            if args.data == 'tiny-imagenet':
-                return vgg.VGG('VGG11', num_classes=args.num_classes, feature_dim=2048)
+    elif args.data == 'mnist':
+        local_model = MnistNet(name='Local')
+
+    elif args.data == 'tiny-imagenet':
+        local_model= resnet18(name='Local')
+
+    if args.load_pretrained == True:
+            if torch.cuda.is_available() :
+                loaded_params = torch.load(args.pretrained_path)
             else:
-                return vgg.VGG('VGG11', num_classes=args.num_classes)
-        
-        
-    elif args.clsmodel == 'PreActResNet18':
-        from classifier_models import PreActResNet18
-        def create_net():
-            return PreActResNet18(num_classes=args.num_classes)
-        
-    elif args.clsmodel == 'ResNet18':
-        from classifier_models import ResNet18
-        def create_net():
-            return ResNet18(num_classes=args.num_classes)
-        
-    elif args.clsmodel == 'ResNet18TinyImagenet':
-        from classifier_models import ResNet18TinyImagenet
-        def create_net():
-            return ResNet18TinyImagenet()
-    
-    clsmodel = create_net().to(args.device)
+                loaded_params = torch.load(args.pretrained_path, map_location='cpu')
 
-    return clsmodel
+            local_model.load_state_dict(loaded_params['state_dict'])
+            start_epoch = loaded_params['epoch'] + 1
+            print(f"Loaded parameters from saved model:"
+                        f" current epoch is {start_epoch}")
+    return local_model
+
+
 def get_image_parameter(args):
     if args.data == "cifar10":
         args.input_height = 32
@@ -408,7 +402,7 @@ def get_noise_generator(args):
 
         elif args.attack_model == 'unet':
             noise_model = UNet(3).to(args.device)
-    
+
     return noise_model
 
 def get_noise_vector(args):

@@ -3,6 +3,12 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--load_pretrained', type=bool, default=False,
+                        help="load pretrained variable from DBA")
+
+    parser.add_argument('--pretrained_path', type=str, default=None,
+                        help="file of pretrained checkpoint")
+
     parser.add_argument('--restrain_lr', type=bool, default=False,
                         help="if set to true, half learning rate per 10 rounds")
 
@@ -60,10 +66,22 @@ def args_parser():
     
     parser.add_argument('--aggr', type=str, default='avg', 
                         help="aggregation function to aggregate agents' local weights")
-    
+
+    parser.add_argument('--krum_selected_number', type=int, default=1, 
+                        help="default number is one krum")
+
+    parser.add_argument('--krum_tolerance_number', type=int, default=3, 
+                        help="default tolerance 3 malicious agent")
+
     parser.add_argument('--local_ep', type=int, default=2,
                         help="number of local epochs:E")
-    
+
+    parser.add_argument('--poison_epoch', type=int, default=6,
+                        help="number of posion epoch")
+
+    parser.add_argument('--step_lr', type=bool, default=True,
+                        help="use scheduler to reduce learning rate")
+
     parser.add_argument('--bs', type=int, default=256,
                         help="local batch size: B")
     
@@ -72,6 +90,9 @@ def args_parser():
 
     parser.add_argument('--generator_lr', type=float, default=1e-4,
                         help='learning rate of noise generator of malicious client')
+
+    parser.add_argument('--poison_lr', type=float, default=0.05,
+                        help='learning rate for malicious training round')
 
     parser.add_argument('--client_moment', type=float, default=0.9,
                         help='clients momentum')
