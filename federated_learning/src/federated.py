@@ -105,9 +105,6 @@ if __name__ == '__main__':
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
         # aggregate params obtained by agents and update the global params
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
-        if rnd == 10:
-            torch.save(global_model.state_dict(), '../data/saved_models/femnist_pretrain/checkpoint_10.pt')
-            exit(0)
 
         
         # inference in every args.snap rounds

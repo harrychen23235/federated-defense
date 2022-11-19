@@ -350,7 +350,7 @@ def get_classification_model(args):
     elif args.data == 'tiny-imagenet':
         local_model= resnet18(name='Local')
 
-    if args.load_pretrained == True and args.data != 'fedemnist':
+    if args.load_pretrained == True:
             if torch.cuda.is_available() :
                 loaded_params = torch.load(args.pretrained_path)
             else:
