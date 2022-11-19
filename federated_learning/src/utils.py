@@ -167,7 +167,7 @@ def compare_images(trigger_model_target, poisoned_val_set, args, round):
     plt.savefig('./src/running_data/images_compare/{round}.png'.format(round = round))
     #plt.close()
 
-def print_exp_details(args):
+def print_exp_details(args, record = None):
     print('======================================')
     print(f'    Dataset: {args.data}')
     print(f'    Global Rounds: {args.rounds}')
@@ -184,8 +184,30 @@ def print_exp_details(args):
     print(f'    Poison Frac: {args.poison_frac}')
     print(f'    Clip: {args.clip}')
     print(f'    restrain lr: {args.restrain_lr}')
+    print(f'    pattern_type: {args.pattern_type}')
+    print(f'    pattern_size: {args.pattern_size}')
     print('======================================')
-
+    if record != None:
+        record.append('======================================')
+        record.append(f'    Dataset: {args.data}')
+        record.append(f'    Global Rounds: {args.rounds}')
+        record.append(f'    Aggregation Function: {args.aggr}')
+        record.append(f'    Number of agents: {args.num_agents}')
+        record.append(f'    Fraction of agents: {args.agent_frac}')
+        record.append(f'    Batch size: {args.bs}')
+        record.append(f'    Client_LR: {args.client_lr}')
+        record.append(f'    Server_LR: {args.server_lr}')
+        record.append(f'    Client_Momentum: {args.client_moment}')
+        record.append(f'    RobustLR_threshold: {args.robustLR_threshold}')
+        record.append(f'    Noise Ratio: {args.noise}')
+        record.append(f'    Number of corrupt agents: {args.num_corrupt}')
+        record.append(f'    Poison Frac: {args.poison_frac}')
+        record.append(f'    Clip: {args.clip}')
+        record.append(f'    restrain lr: {args.restrain_lr}')
+        record.append(f'    pattern_type: {args.pattern_type}')
+        record.append(f'    pattern_size: {args.pattern_size}')
+        record.append(f'======================================')
+        
 def print_distribution(user_groups, num_classes, train_dataset):
     print('======================================')
     for i in range(len(user_groups)):

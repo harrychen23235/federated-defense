@@ -164,7 +164,7 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
                 if_add = random.uniform(0, 1)
                 if val_mode==True or if_add < args.poison_frac:
                     if args.attack_mode == 'DBA' or args.attack_mode == 'normal':
-                        img = add_pattern_bd(copy.deepcopy(img), args.data, args.pattern_type, agent_id, args.attack_mode, val_mode)
+                        img = add_pattern_bd(copy.deepcopy(img), args.data, args.pattern_type, agent_id, args.attack_mode, val_mode, args)
                         transformed_label = single_label_transform(label, args)
                         if args.malicious_style == 'in_order' or val_mode==True:
                             batch_X_pos_ifc.append(img.unsqueeze(0))
@@ -424,7 +424,7 @@ def single_label_transform(label, args):
     elif args.poison_mode == 'all2all':
         return (label + 1) % args.num_classes
 
-def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mode = 'normal', val_mode = False):
+def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mode = 'normal', val_mode = False, args = None):
     """
     adds a trojan pattern to the image
     """
@@ -457,6 +457,18 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                         for j in range(len(pattern_type[i])):
                             pos = pattern_type[i][j]
                             x[d][pos[0]][pos[1]] = trigger_value
+            elif pattern_type == "size_test":
+                size = args.pattern_size
+                for d in range(0, 3):
+                    for i in range(size):
+                        for j in range(size):
+                            x[d][i][j] = trigger_value
+            elif pattern_type == "location_test":
+                location = args.location
+                for d in range(0, 3):
+                    for i in range(location[0], location[0] + 2):
+                        for j in range(location[1],location[1] + 2):
+                            x[d][i][j] = trigger_value 
         elif dataset == 'mnist' or dataset == 'fedemnist':
             if pattern_type == 'square':
                 for i in range(21, 26):
@@ -496,6 +508,16 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                         pos = pattern_type[i][j]
                         x[pos[0]][pos[1]] = trigger_value
 
+            elif pattern_type == "size_test":
+                size = args.pattern_size
+                for i in range(size):
+                    for j in range(size):
+                        x[i][j] = trigger_value
+            elif pattern_type == "location_test":
+                location = args.pattern_location
+                for i in range(location[0], location[0] + 2):
+                    for j in range(location[1],location[1] + 2):
+                        x[i][j] = trigger_value 
     elif mode == 'DBA':
         if dataset == 'cifar10' or dataset == 'tiny-imagenet':
             if pattern_type == 'vertical_line':

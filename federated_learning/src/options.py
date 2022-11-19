@@ -6,6 +6,9 @@ def args_parser():
     parser.add_argument('--load_pretrained', type=bool, default=False,
                         help="load pretrained variable from DBA")
 
+    parser.add_argument('--storing_dir', type=str, default=None,
+                        help="dir to store checkpoint & acc file")
+
     parser.add_argument('--pretrained_path', type=str, default=None,
                         help="file of pretrained checkpoint")
 
@@ -111,7 +114,13 @@ def args_parser():
     
     parser.add_argument('--pattern_type', type=str, default='pixel', 
                         help="shape of bd pattern, including:square, copyright, apple, vertical_line, apple")
-    
+
+    parser.add_argument('--pattern_size', type=int, default=2, 
+                        help="edge length of square pattern")
+
+    parser.add_argument('--pattern_location', type=list, default=[0,0], 
+                        help="start location of [2,2] pattern")
+
     parser.add_argument('--robustLR_threshold', type=int, default=0, 
                         help="break ties when votes sum to 0")
     

@@ -13,35 +13,45 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 from time import ctime
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
-
+import os
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
 if __name__ == '__main__':
+    #os.chdir('C://Users//harrychen23235//Desktop//report//security//federated-defense//federated_learning')
     args = args_parser()
 
     '''
-    args.data = 'tiny-imagenet'
-    args.local_ep=2 
-    args.bs = 256
-    args.num_agents=5
-    args.rounds=200
+    args.data = 'mnist'
+    args.num_agents=10
+    args.rounds=2
     args.partition = 'homo'
+    args.load_pretrained = True
+    args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
+    #args.pretrained_path = '..//data//saved_models//cifar_pretrain//model_last.pt.tar.epoch_200'
     args.attack_mode = 'normal'
-    args.num_corrupt = 1
-    args.poison_frac = 0.5
+    args.num_corrupt = 4
+    args.poison_frac = 0.2
     args.malicious_style='mixed'
+    args.attack_start_round = 1
+    args.storing_dir = './pattern_size_2'
+    args.pattern_type = "size_test"
+    args.pattern_size = 20
+    #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
     #args.noise_total_epoch = 2
     #args.noise_sub_epoch = 1
     #args.trigger_training = 'both'
     '''
-    args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
-    utils.print_exp_details(args)
-    
 
+    args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
+    test_accuracy_record = []
+    utils.print_exp_details(args, test_accuracy_record)
+    
+    if not os.path.exists(args.storing_dir):
+        os.mkdir(args.storing_dir)
 
     # data recorders
     file_name = f"""clip_val-{args.clip}-noise_std-{args.noise}"""\
@@ -80,7 +90,6 @@ if __name__ == '__main__':
     aggregator = Aggregation(agent_data_sizes, n_model_params, args, writer)
     criterion = nn.CrossEntropyLoss().to(args.device)
 
-
     # training loop
     for rnd in tqdm(range(1, args.rounds+1)):
         if args.restrain_lr and rnd % 10 == 0:
@@ -89,6 +98,8 @@ if __name__ == '__main__':
         agent_updates_dict = {}
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
             update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target, trigger_vector])
+            if rnd >= args.attack_start_round:
+                torch.save(update, os.path.join(args.storing_dir, '{}_update.pt'.format(agent_id)))
             agent_updates_dict[agent_id] = update
             # make sure every agent gets same copy of the global model in a round (i.e., they don't affect each other's training)
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
@@ -98,6 +109,7 @@ if __name__ == '__main__':
         
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
+            test_accuracy_record.append('current rnd is {}'.format(rnd))
             print(f'**** start testing ****')
             with torch.no_grad():
                 val_loss, (val_acc, val_per_class_acc) = utils.get_loss_n_accuracy_normal(global_model, criterion, val_loader, args, args.num_classes)
@@ -105,7 +117,7 @@ if __name__ == '__main__':
                 writer.add_scalar('Validation/Accuracy', val_acc, rnd)
                 print(f'| Val_Loss/Val_Acc: {val_loss:.3f} / {val_acc:.3f} |')
                 print(f'| Val_Per_Class_Acc: {val_per_class_acc} ')
-                
+                test_accuracy_record.append(f'| Val_Loss/Val_Acc: {val_loss:.3f} / {val_acc:.3f} |')
                 if args.attack_mode == 'fixed_generator':
                     poison_loss, (poison_acc, _) = utils.get_loss_n_accuracy_poison(global_model, trigger_vector, criterion,  poisoned_val_set, args, args.num_classes)
                 elif args.attack_mode == 'trigger_generation':
@@ -119,6 +131,7 @@ if __name__ == '__main__':
                 writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
                 writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
+                test_accuracy_record.append(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 '''
                 if args.num_corrupt > 0:
                     if args.attack_mode == 'fixed_generator':
@@ -128,6 +141,12 @@ if __name__ == '__main__':
                     else:
                         utils.compare_images(None, poisoned_val_set, args, rnd)
                 '''
+    with open(os.path.join(args.storing_dir, 'accuracy_record.txt'), 'w') as f:
+        for line in test_accuracy_record:
+            f.write(line)
+            f.write('\n')
+    
+    f.close()
 
     print('Training has finished!')
    
