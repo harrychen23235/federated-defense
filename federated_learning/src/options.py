@@ -118,7 +118,7 @@ def args_parser():
     parser.add_argument('--pattern_size', type=int, default=2, 
                         help="edge length of square pattern")
 
-    parser.add_argument('--pattern_location', type=list, default=[0,0], 
+    parser.add_argument('--pattern_location', nargs='+', type=int, default=[0,0], 
                         help="start location of [2,2] pattern")
 
     parser.add_argument('--robustLR_threshold', type=int, default=0, 
