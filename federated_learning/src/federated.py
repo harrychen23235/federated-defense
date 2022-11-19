@@ -99,7 +99,7 @@ if __name__ == '__main__':
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
             update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target, trigger_vector])
             if rnd >= args.attack_start_round:
-                torch.save(update, os.path.join(args.storing_dir, '{}_update.pt'.format(agent_id)))
+                torch.save(update, os.path.join(args.storing_dir, 'round_{}_agent_{}_update.pt'.format(rnd, agent_id)))
             agent_updates_dict[agent_id] = update
             # make sure every agent gets same copy of the global model in a round (i.e., they don't affect each other's training)
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
