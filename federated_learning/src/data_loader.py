@@ -355,8 +355,10 @@ def get_classification_model(args):
                 loaded_params = torch.load(args.pretrained_path)
             else:
                 loaded_params = torch.load(args.pretrained_path, map_location='cpu')
-
-            local_model.load_state_dict(loaded_params['state_dict'])
+            if args.data == 'fedemnist':
+                local_model.load_state_dict(loaded_params)
+            else:
+                local_model.load_state_dict(loaded_params['state_dict'])
             start_epoch = loaded_params['epoch'] + 1
             print(f"Loaded parameters from saved model:"
                         f" current epoch is {start_epoch}")
