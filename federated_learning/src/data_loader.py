@@ -464,10 +464,10 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                         for j in range(size):
                             x[d][i][j] = trigger_value
             elif pattern_type == "location_test":
-                location = args.location
+                location = args.pattern_location
                 for d in range(0, 3):
-                    for i in range(location[0], location[0] + 2):
-                        for j in range(location[1],location[1] + 2):
+                    for i in range(location[0], location[0] + 3):
+                        for j in range(location[1],location[1] + 3):
                             x[d][i][j] = trigger_value 
         elif dataset == 'mnist' or dataset == 'fedemnist':
             if pattern_type == 'square':
@@ -515,8 +515,8 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                         x[i][j] = trigger_value
             elif pattern_type == "location_test":
                 location = args.pattern_location
-                for i in range(location[0], location[0] + 2):
-                    for j in range(location[1],location[1] + 2):
+                for i in range(location[0], location[0] + 3):
+                    for j in range(location[1],location[1] + 3):
                         x[i][j] = trigger_value 
     elif mode == 'DBA':
         if dataset == 'cifar10' or dataset == 'tiny-imagenet':

@@ -133,7 +133,7 @@ def compare_images(trigger_model_target, poisoned_val_set, args, round):
     for index in range(5):
         img, _ = poisoned_val_set[index]
         if args.attack_mode == 'normal' or args.attack_mode == 'DBA':
-            poisoned_img = add_pattern_bd(copy.deepcopy(img), args.data, args.pattern_type, -1, args.attack_mode, True)
+            poisoned_img = add_pattern_bd(copy.deepcopy(img), args.data, args.pattern_type, -1, args.attack_mode, True, args)
         
         elif args.attack_mode == 'trigger_generation':
             img = img.unsqueeze(0).to(device=args.device)
@@ -186,6 +186,7 @@ def print_exp_details(args, record = None):
     print(f'    restrain lr: {args.restrain_lr}')
     print(f'    pattern_type: {args.pattern_type}')
     print(f'    pattern_size: {args.pattern_size}')
+    print(f'    pattern_location: {args.pattern_location}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -206,6 +207,7 @@ def print_exp_details(args, record = None):
         record.append(f'    restrain lr: {args.restrain_lr}')
         record.append(f'    pattern_type: {args.pattern_type}')
         record.append(f'    pattern_size: {args.pattern_size}')
+        record.append(f'    pattern_location: {args.pattern_location}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
