@@ -359,9 +359,9 @@ def get_classification_model(args):
                 local_model.load_state_dict(loaded_params)
             else:
                 local_model.load_state_dict(loaded_params['state_dict'])
-            start_epoch = loaded_params['epoch'] + 1
-            print(f"Loaded parameters from saved model:"
-                        f" current epoch is {start_epoch}")
+                start_epoch = loaded_params['epoch'] + 1
+                print(f"Loaded parameters from saved model:"
+                            f" current epoch is {start_epoch}")
     return local_model
 
 
