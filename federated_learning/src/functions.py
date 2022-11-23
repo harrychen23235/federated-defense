@@ -60,7 +60,7 @@ def test_reddit_poison(args, reddit_data_dict, model):
 
 
     for batch_id, batch in enumerate(data_iterator):
-        data, targets = get_batch(dataset_size, batch)
+        data, targets = get_batch(test_data_poison, batch)
         output, hidden = model(data, hidden)
         output_flat = output.view(-1, ntokens)
         total_loss += 1 * criterion(output_flat[-batch_size:], targets[-batch_size:]).data
