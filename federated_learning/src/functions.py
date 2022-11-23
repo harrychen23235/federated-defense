@@ -9,6 +9,7 @@ import copy
 from data_loader import *
 from utils.text_load import *
 import matplotlib.pyplot as plt
+from torch.nn.utils import parameters_to_vector, vector_to_parameters
 def test_reddit_normal(args, reddit_data_dict, model):
     criterion = torch.nn.CrossEntropyLoss()
     model.eval()
@@ -204,16 +205,7 @@ def get_gradient_of_model(model):
     return sum_var
 
 def model_dist_norm_var(model, target_params_variables, norm=2):
-    size = 0
-    for name, layer in model.named_parameters():
-        size += layer.view(-1).shape[0]
-    sum_var = torch.cuda.FloatTensor(size).fill_(0)
-    size = 0
-    for name, layer in model.named_parameters():
-        sum_var[size:size + layer.view(-1).shape[0]] = (
-        layer - target_params_variables[size:size + layer.view(-1).shape[0]]).view(-1)
-        size += layer.view(-1).shape[0]
-
+    sum_var = parameters_to_vector(model) - target_params_variables
     return torch.norm(sum_var, norm)
 
 def norm_between_two_vector(vector1, vector2, norm = 2):
