@@ -205,7 +205,7 @@ def get_gradient_of_model(model):
     return sum_var
 
 def model_dist_norm_var(model, target_params_variables, norm=2):
-    sum_var = parameters_to_vector(model) - target_params_variables
+    sum_var = parameters_to_vector(model.parameters()) - target_params_variables
     return torch.norm(sum_var, norm)
 
 def norm_between_two_vector(vector1, vector2, norm = 2):
