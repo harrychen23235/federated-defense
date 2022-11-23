@@ -211,7 +211,7 @@ def model_dist_norm_var(model, target_params_variables, norm=2):
     size = 0
     for name, layer in model.named_parameters():
         sum_var[size:size + layer.view(-1).shape[0]] = (
-        layer - target_params_variables[name]).view(-1)
+        layer - target_params_variables[size:size + layer.view(-1).shape[0]]).view(-1)
         size += layer.view(-1).shape[0]
 
     return torch.norm(sum_var, norm)
