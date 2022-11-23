@@ -38,21 +38,11 @@ def test_reddit_normal(args, reddit_data_dict, model):
         correct += pred.eq(targets.data).sum().to(dtype=torch.float)
         total_test_words += targets.data.shape[0]
 
-        output = model(data)
-        total_loss += nn.functional.cross_entropy(output, targets,
-                                            reduction='sum').item() # sum up batch loss
-        pred = output.data.max(1)[1]  # get the index of the max log-probability
-        correct += pred.eq(targets.data.view_as(pred)).cpu().sum().item()
+    acc = 100.0 * (correct / total_test_words)
+    total_l = total_loss.item() / (dataset_size-1)
 
-
-        acc = 100.0 * (correct / total_test_words)
-        total_l = total_loss.item() / (dataset_size-1)
-
-        acc = acc.item()
-        total_l = total_l.item()
-    else:
-        acc = 100.0 * (float(correct) / float(dataset_size))
-        total_l = total_loss / dataset_size
+    acc = acc.item()
+    total_l = total_l.item()
 
     model.train()
     return total_l, acc
