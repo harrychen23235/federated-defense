@@ -371,7 +371,7 @@ def get_datasets(args):
         test_dataset = load_imagenet(os.path.join(data_dir, 'tiny-imagenet-pt', 'imagenet_val.pt'), transform=test_transform)
     
     elif args.data == 'reddit':
-        return load_reddit(os.path.join(data_dir, 'corpus_1000.pt'), os.path.join(data_dir, '50k_word_dictionary.pt'), args)
+        return load_reddit(os.path.join(data_dir, 'corpus_80000.pt'), os.path.join(data_dir, '50k_word_dictionary.pt'), args)
     return train_dataset, test_dataset
 
 def get_classification_model(args):
