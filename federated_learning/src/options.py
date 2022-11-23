@@ -3,11 +3,17 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--save_checkpoint', type=bool, default=False,
+                        help="save checkpoint when attacking")
+
     parser.add_argument('--load_pretrained', type=bool, default=False,
                         help="load pretrained variable from DBA")
 
     parser.add_argument('--storing_dir', type=str, default=None,
                         help="dir to store checkpoint & acc file")
+
+    parser.add_argument('--poison_sentences', nargs='+', type=str, default='[pasta from Astoria tastes delicious]',
+                        help="poison sentence for NLP")
 
     parser.add_argument('--pretrained_path', type=str, default=None,
                         help="file of pretrained checkpoint")

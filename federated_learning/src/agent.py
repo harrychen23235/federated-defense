@@ -1,6 +1,6 @@
 import torch
 import models
-import utils
+import functions
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -9,8 +9,7 @@ from attack_models.autoencoders import *
 from attack_models.unet import *
 
 import data_loader
-import utils
-
+from utils.text_load import *
 import copy
 class Agent():
     def __init__(self, id, args, train_dataset=None, data_idxs=None):
@@ -21,15 +20,68 @@ class Agent():
             self.attack_start_round = args.attack_start_round
         else:
             self.malicious = False
+        if self.args.data != 'reddit':
+            self.train_dataset = data_loader.Dataset_FL(train_dataset, data_idxs, self.args, self.id)
 
-        self.train_dataset = data_loader.Dataset_FL(train_dataset, data_idxs, self.args, self.id)
-
-        # get dataloader
-        self.train_loader = DataLoader(self.train_dataset, batch_size=self.args.bs, shuffle=True,\
-            num_workers=args.num_workers, pin_memory=False)
-        # size of local dataset
-        self.n_data = len(self.train_dataset)
+            # get dataloader
+            self.train_loader = DataLoader(self.train_dataset, batch_size=self.args.bs, shuffle=True,\
+                num_workers=args.num_workers, pin_memory=False)
+            # size of local dataset
+            self.n_data = len(self.train_dataset)
         
+    def local_reddit_train(self, global_model, criterion, rnd, data_dict, sampling):
+        train_data = data_dict['train_data'][sampling[self.id]]
+        ntokens = data_dict['n_tokens']
+        hidden = global_model.init_hidden(self.args.bs)
+
+        poisoned_data = data_dict['poisoned_data_for_train']
+        bptt = 64
+        initial_vector = parameters_to_vector(global_model.parameters()).detach()
+        if self.malicious == True and rnd >= self.attack_start_round:
+            optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.poison_lr,
+                            momentum=self.args.client_moment)
+            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                                             milestones=[0.2 * self.args.poison_epoch,
+                                                                         0.8 * self.args.poison_epoch],
+                                                             gamma=0.1)
+            global_model.train()
+            for epoch in range(self.args.poison_epoch):
+                    if self.args.step_lr:
+                        scheduler.step()
+                        data_iterator = range(0, poisoned_data.size(0) - 1, bptt)
+                        for batch_id, batch in enumerate(data_iterator):
+                            data, targets = get_batch(poisoned_data, batch)
+                            optimizer.zero_grad()
+                            hidden = repackage_hidden(hidden)
+                            output, hidden = global_model(data, hidden)
+                            class_loss = criterion(output[-1].view(-1, ntokens),
+                                                   targets[-self.args.bs:])
+                            distance_loss = functions.model_dist_norm_var(global_model, initial_vector)
+
+                            loss = self.args.alpha * class_loss + self.args.alpha * distance_loss
+                            loss.backward()
+                            optimizer.step()
+        else:
+            optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr,
+                        momentum=self.args.client_moment)
+
+            for epoch in range(self.args.local_ep):
+                bptt = 64
+                data_iterator = range(0, train_data.size(0) - 1, bptt)
+                for batch_id, batch in enumerate(data_iterator):
+                    optimizer.zero_grad()
+                    data, targets = get_batch(train_data, batch)
+                    hidden = repackage_hidden(hidden)
+                    output, hidden = global_model(data, hidden)
+                    loss = criterion(output.view(-1, ntokens), targets)
+                    loss.backward()
+                    optimizer.step()
+
+        with torch.no_grad():
+            update = parameters_to_vector(global_model.parameters()).double() - initial_vector
+            return update
+
+
     def local_train(self, global_model, criterion, rnd, trigger_model = None):
         if self.malicious == False or rnd < self.attack_start_round:
             return self.local_benign_train(global_model, criterion)
@@ -84,8 +136,8 @@ class Agent():
                         adv_loss.backward()
                         #adv_loss.backward(create_graph = True)
                         '''
-                        grads = utils.get_gradient_of_model(global_model)
-                        cos_loss = utils.cosine_simi_between_two_vector(benign_update, grads)
+                        grads = functions.get_gradient_of_model(global_model)
+                        cos_loss = functions.cosine_simi_between_two_vector(benign_update, grads)
                         cos_loss.backward()
                     '''
                         if self.args.attack_mode == 'trigger_generation':

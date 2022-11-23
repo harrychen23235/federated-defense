@@ -15,7 +15,7 @@ from attack_models.unet import *
 from classifier_models.resnet_cifar import ResNet18
 from classifier_models.MnistNet import MnistNet,FEMnistNet
 from classifier_models.resnet_tinyimagenet import resnet18
-
+from classifier_models.word_model import RNNModel
 import math
 import os
 import copy
@@ -25,6 +25,9 @@ from torch.autograd import Variable
 import sys
 
 import pickle
+
+from utils.text_load import *
+
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 
@@ -38,6 +41,36 @@ def load_imagenet(path, transform = None):
         targets_list.append(item[1])
     targets = torch.LongTensor(targets_list)
     return General_Dataset(data = data_list, targets=targets, transform=transform)
+
+def load_reddit(data_path,  dict_path, args = None):
+    size_of_secret_dataset = 1280
+    corpus = torch.load(data_path)
+    corpus.path = '../data/reddit'
+    dictionary = torch.load(dict_path)
+    train_data = [batchify(data_chunk, args.bs) for data_chunk in
+                corpus.train]
+    test_data = batchify(corpus.test, args.bs)
+
+    bptt = 64
+    data_size = test_data.size(0) // bptt
+    test_data_sliced = test_data.clone()[:data_size * bptt]
+    test_data_poison = poison_dataset(test_data_sliced, dictionary, args)
+
+    poisoned_data =batchify(
+        corpus.load_poison_data(number_of_words=size_of_secret_dataset *
+                                                        args.bs),
+        args.bs)
+    poisoned_data_for_train = poison_dataset(poisoned_data, dictionary,
+                                                        args)
+    n_tokens = len(corpus.dictionary)
+    data_dict = {}
+    data_dict['n_tokens'] = n_tokens
+    data_dict['poisoned_data_for_train'] = poisoned_data_for_train
+    data_dict['test_data_poison'] = test_data_poison
+    data_dict['test_data'] = test_data
+    data_dict['train_data'] = train_data
+
+    return data_dict
 
 def load_femnist(path, train = True, transform = None):
     femnist_dict = None
@@ -309,9 +342,10 @@ def get_transform(args, train = True):
 
 def get_datasets(args):
     """ returns train and test datasets """
-    get_image_parameter(args)
-    train_transform = get_transform(args, train=True)
-    test_transform = get_transform(args, train=False)
+    if args.data != 'reddit':
+        get_image_parameter(args)
+        train_transform = get_transform(args, train=True)
+        test_transform = get_transform(args, train=False)
 
     train_dataset, test_dataset = None, None
     data_dir = '../data'
@@ -335,6 +369,9 @@ def get_datasets(args):
     elif args.data == 'tiny-imagenet':
         train_dataset = load_imagenet(os.path.join(data_dir, 'tiny-imagenet-pt', 'imagenet_train.pt'), transform=train_transform)
         test_dataset = load_imagenet(os.path.join(data_dir, 'tiny-imagenet-pt', 'imagenet_val.pt'), transform=test_transform)
+    
+    elif args.data == 'reddit':
+        return load_reddit(os.path.join(data_dir, 'corpus_1000.pt'), os.path.join(data_dir, '50k_word_dictionary.pt'), args)
     return train_dataset, test_dataset
 
 def get_classification_model(args):
@@ -350,6 +387,12 @@ def get_classification_model(args):
     elif args.data == 'tiny-imagenet':
         local_model= resnet18(name='Local')
 
+    elif args.data == 'reddit':
+        local_model = RNNModel(name='Local', created_time=None,
+                               rnn_type='LSTM', ntoken=50000,
+                               ninp=200, nhid=200,
+                               nlayers=2,
+                               dropout=0.2, tie_weights=True)
     if args.load_pretrained == True:
             if torch.cuda.is_available() :
                 loaded_params = torch.load(args.pretrained_path)

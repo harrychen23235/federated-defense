@@ -7,8 +7,94 @@ from attack_models.unet import *
 import copy
 
 from data_loader import *
-
+from utils.text_load import *
 import matplotlib.pyplot as plt
+def test_reddit_normal(args, reddit_data_dict, model):
+    criterion = torch.nn.CrossEntropyLoss()
+    model.eval()
+    total_loss = 0
+    correct = 0
+    total_test_words = 0
+    batch_size = args.bs
+    bptt = 64
+    test_data = reddit_data_dict['test_data']
+
+    hidden = model.init_hidden(batch_size)
+    random_print_output_batch = \
+    random.sample(range(0, (test_data.size(0) // bptt) - 1), 1)[0]
+    data_iterator = range(0, test_data.size(0)-1, bptt)
+    dataset_size = len(test_data)
+    n_tokens = reddit_data_dict['n_tokens']
+
+    for batch_id, batch in enumerate(data_iterator):
+        data, targets = get_batch(test_data, batch)
+
+        output, hidden = model(data, hidden)
+        output_flat = output.view(-1, n_tokens)
+        total_loss += len(data) * criterion(output_flat, targets).data
+        hidden = repackage_hidden(hidden)
+        pred = output_flat.data.max(1)[1]
+        correct += pred.eq(targets.data).sum().to(dtype=torch.float)
+        total_test_words += targets.data.shape[0]
+
+        output = model(data)
+        total_loss += nn.functional.cross_entropy(output, targets,
+                                            reduction='sum').item() # sum up batch loss
+        pred = output.data.max(1)[1]  # get the index of the max log-probability
+        correct += pred.eq(targets.data.view_as(pred)).cpu().sum().item()
+
+
+        acc = 100.0 * (correct / total_test_words)
+        total_l = total_loss.item() / (dataset_size-1)
+
+        acc = acc.item()
+        total_l = total_l.item()
+    else:
+        acc = 100.0 * (float(correct) / float(dataset_size))
+        total_l = total_loss / dataset_size
+
+    model.train()
+    return total_l, acc
+
+def test_reddit_poison(args, reddit_data_dict, model):
+    model.eval()
+    criterion = torch.nn.CrossEntropyLoss()
+    total_loss = 0.0
+    correct = 0.0
+    total_test_words = 0.0
+    bptt = 64
+    batch_size = args.bs
+    test_data_poison = reddit_data_dict['test_data_poison']
+    ntokens = reddit_data_dict['n_tokens']
+    hidden = model.init_hidden(batch_size)
+    data_iterator = range(0, test_data_poison.size(0) - 1, bptt)
+    dataset_size = len(test_data_poison)
+
+
+    for batch_id, batch in enumerate(data_iterator):
+        data, targets = get_batch(dataset_size, batch)
+        output, hidden = model(data, hidden)
+        output_flat = output.view(-1, ntokens)
+        total_loss += 1 * criterion(output_flat[-batch_size:], targets[-batch_size:]).data
+        hidden = repackage_hidden(hidden)
+
+        ### Look only at predictions for the last words.
+        # For tensor [640] we look at last 10, as we flattened the vector [64,10] to 640
+        # example, where we want to check for last line (b,d,f)
+        # a c e   -> a c e b d f
+        # b d f
+        pred = output_flat.data.max(1)[1][-batch_size:]
+
+
+        correct_output = targets.data[-batch_size:]
+        correct += pred.eq(correct_output).sum()
+        total_test_words += batch_size
+
+    acc = 100.0 * (correct / total_test_words)
+    total_l = total_loss.item() / dataset_size
+
+    model.train()
+    return total_l, acc
 
 def get_loss_n_accuracy_normal(model, criterion, data_loader, args, num_classes=10):
     """ Returns the loss and total accuracy, per class accuracy on the supplied data loader """
@@ -116,7 +202,20 @@ def get_gradient_of_model(model):
                 grad).view(-1)
         size += grad.view(-1).shape[0]
     return sum_var
-    
+
+def model_dist_norm_var(model, target_params_variables, norm=2):
+    size = 0
+    for name, layer in model.named_parameters():
+        size += layer.view(-1).shape[0]
+    sum_var = torch.cuda.FloatTensor(size).fill_(0)
+    size = 0
+    for name, layer in model.named_parameters():
+        sum_var[size:size + layer.view(-1).shape[0]] = (
+        layer - target_params_variables[name]).view(-1)
+        size += layer.view(-1).shape[0]
+
+    return torch.norm(sum_var, norm)
+
 def norm_between_two_vector(vector1, vector2, norm = 2):
     return torch.norm(vector1 - vector2, norm)
 
