@@ -46,8 +46,6 @@ class Agent():
                                                              gamma=0.1)
             global_model.train()
             for epoch in range(self.args.poison_epoch):
-                    if self.args.step_lr:
-                        scheduler.step()
                         data_iterator = range(0, poisoned_data.size(0) - 1, bptt)
                         for batch_id, batch in enumerate(data_iterator):
                             data, targets = get_batch(poisoned_data, batch)
@@ -61,6 +59,8 @@ class Agent():
                             #loss = self.args.alpha * class_loss + self.args.alpha * distance_loss
                             class_loss.backward()
                             optimizer.step()
+                            if self.args.step_lr:
+                                scheduler.step()
         else:
             optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr,
                         momentum=self.args.client_moment)

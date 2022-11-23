@@ -150,10 +150,10 @@ if __name__ == '__main__':
                     poison_loss, poison_acc = functions.test_reddit_poison(args, data_dict, global_model)
 
                 cum_poison_acc_mean += poison_acc
-                writer.add_scalar('Poison/Base_Class_Accuracy', val_per_class_acc[args.base_class], rnd)
-                writer.add_scalar('Poison/Poison_Accuracy', poison_acc, rnd)
-                writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
-                writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
+                #writer.add_scalar('Poison/Base_Class_Accuracy', val_per_class_acc[args.base_class], rnd)
+                #writer.add_scalar('Poison/Poison_Accuracy', poison_acc, rnd)
+                #writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
+                #writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 test_accuracy_record.append(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 '''
