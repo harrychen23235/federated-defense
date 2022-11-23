@@ -56,10 +56,10 @@ class Agent():
                             output, hidden = global_model(data, hidden)
                             class_loss = criterion(output[-1].view(-1, ntokens),
                                                    targets[-self.args.bs:])
-                            distance_loss = functions.model_dist_norm_var(global_model, initial_vector)
+                            #distance_loss = functions.model_dist_norm_var(global_model, initial_vector)
 
-                            loss = self.args.alpha * class_loss + self.args.alpha * distance_loss
-                            loss.backward()
+                            #loss = self.args.alpha * class_loss + self.args.alpha * distance_loss
+                            class_loss.backward()
                             optimizer.step()
         else:
             optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr,
