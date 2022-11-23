@@ -41,9 +41,6 @@ def test_reddit_normal(args, reddit_data_dict, model):
     acc = 100.0 * (correct / total_test_words)
     total_l = total_loss.item() / (dataset_size-1)
 
-    acc = acc.item()
-    total_l = total_l.item()
-
     model.train()
     return total_l, acc
 
