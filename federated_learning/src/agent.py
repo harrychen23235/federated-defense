@@ -11,6 +11,8 @@ from attack_models.unet import *
 import data_loader
 from utils.text_load import *
 import copy
+
+import math
 class Agent():
     def __init__(self, id, args, train_dataset=None, data_idxs=None):
         self.id = id
@@ -96,7 +98,7 @@ class Agent():
 
     def local_malicious_train_trigger_generation(self, global_model, criterion, trigger_model):
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
-        benign_update = self.local_common_train(global_model, criterion, malicious_mode = False)
+        #benign_update = self.local_common_train(global_model, criterion, malicious_mode = False)
 
         vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
 
@@ -105,7 +107,8 @@ class Agent():
             noise_generator_target = trigger_model[1]
             vector_to_parameters(parameters_to_vector(noise_generator_target.parameters()).detach(), noise_generator_using.parameters())
         elif self.args.attack_mode == 'fixed_generator':
-            noise_vector = trigger_model[2]
+            noise_vector_using = trigger_model[2]
+            noise_vector_target = trigger_model[3]
 
         global_model.train()
         classifier_optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr, 
@@ -114,7 +117,7 @@ class Agent():
         if self.args.attack_mode == 'trigger_generation':
             generator_optimizer = torch.optim.Adam(noise_generator_target.parameters(), lr=self.args.generator_lr)
 
-        for _ in range(self.args.noise_total_epoch):
+        for _ in range(self.args.poison_epoch):
             for _ in range(self.args.noise_sub_epoch):
                 for inputs, labels,_,_ in data_loader.enumerate_batch(self.train_dataset, 'benign', self.args.bs, self.args, self.id):
                     inputs, labels = inputs.to(device=self.args.device, non_blocking=True),\
@@ -127,7 +130,12 @@ class Agent():
                         if self.args.attack_mode == 'trigger_generation':
                             noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
                         elif self.args.attack_mode == 'fixed_generator':
-                            noise_inputs = torch.clamp(inputs + noise_vector, 0.0, 1.0)
+                            if not(noise_vector_using.shape[-1] == inputs.shape[-1] and noise_vector_using.shape[-2] == inputs.shape[-2]):
+                                filled_zero_shape = (0, inputs.shape[-1] - noise_vector_using.shape[-1], 0, inputs.shape[-2] - noise_vector_using.shape[-2])
+                                processed_noise_vector = nn.functional.pad(noise_vector_using, filled_zero_shape, 'constant', 0)
+                                noise_inputs = torch.clamp(inputs + processed_noise_vector, 0.0, 1.0)
+                            else:
+                                noise_inputs = torch.clamp(inputs + noise_vector_using, 0.0, 1.0)
 
                         noise_labels = data_loader.target_transform(labels,self.args)
 
@@ -143,32 +151,46 @@ class Agent():
                         if self.args.attack_mode == 'trigger_generation':
                             generator_optimizer.step()
                         elif self.args.attack_mode == 'fixed_generator':
-                            noise_vector.data = noise_vector.data - self.args.generator_lr * noise_vector.grad
-                            noise_vector.grad *= 0
+                            noise_vector_target.data = noise_vector_target.data - self.args.generator_lr * noise_vector_using.grad
+                            noise_vector_using.grad *= 0
 
                     classifier_optimizer.zero_grad()
                     outputs = global_model(inputs)
                     benign_loss = criterion(outputs, labels.view(-1, ))
+                    distance_loss = functions.model_dist_norm_var(global_model, initial_global_model_params)
 
                     if self.args.trigger_training != 'generator_only':
                         if self.args.attack_mode == 'trigger_generation':
                             noise_inputs = noise_generator_target(inputs) * self.args.noise_eps + inputs
                         elif self.args.attack_mode == 'fixed_generator':
-                            noise_inputs = torch.clamp(inputs + noise_vector, 0.0, 1.0)
+                            if not(noise_vector_using.shape[-1] == inputs.shape[-1] and noise_vector_using.shape[-2] == inputs.shape[-2]):
+                                filled_zero_shape = (0, inputs.shape[-1] - noise_vector_using.shape[-1], 0, inputs.shape[-2] - noise_vector_using.shape[-2])
+                                processed_noise_vector = nn.functional.pad(noise_vector_using, filled_zero_shape, 'constant', 0)
+                                noise_inputs = torch.clamp(inputs + processed_noise_vector, 0.0, 1.0)
+                            else:
+                                noise_inputs = torch.clamp(inputs + noise_vector_using, 0.0, 1.0)
+                        '''
+                        selected_size = math.floor(self.args.poison_frac * noise_inputs.shape[0])
+                        random_index = torch.randint(len(noise_inputs),(selected_size,))
 
+                        noise_inputs = noise_inputs[random_index] 
+                        labels = labels[random_index]
+                        '''
                         noise_labels = data_loader.target_transform(labels,self.args)
                         noise_outputs = global_model(noise_inputs)
                         adv_loss = criterion(noise_outputs, noise_labels.view(-1,))
-                        total_loss = benign_loss * self.args.alpha + adv_loss * (1 - self.args.alpha)
+                        total_loss = benign_loss * self.args.alpha + adv_loss * (1 - self.args.alpha) + 0.1 * distance_loss
                     else:
-                        total_loss = benign_loss
+                        total_loss = benign_loss + 0.1 * distance_loss
 
                     total_loss.backward()
                     classifier_optimizer.step()
 
-            if self.args.trigger_training != 'classifier_only' and self.args.attack_mode != 'fixed_generator':
-                noise_generator_using.load_state_dict(noise_generator_target.state_dict())
-    
+            if self.args.trigger_training != 'classifier_only':
+                if self.args.attack_mode != 'fixed_generator':
+                    noise_generator_using.load_state_dict(noise_generator_target.state_dict())
+                else:
+                    noise_vector_using.data = noise_vector_target.data
         with torch.no_grad():
             update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
 

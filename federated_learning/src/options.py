@@ -3,6 +3,9 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--underwater_attacker', type=bool, default=False,
+                        help="attacker not join aggregation round")
+
     parser.add_argument('--save_checkpoint', type=bool, default=False,
                         help="save checkpoint when attacking")
 

@@ -23,29 +23,35 @@ if __name__ == '__main__':
     #os.chdir('C://Users//harrychen23235//Desktop//report//security//federated-defense//federated_learning')
     args = args_parser()
 
-    
-    args.data = 'reddit'
+    '''
+    args.data = 'mnist'
     args.num_agents=10
-    args.rounds=2
+    args.rounds=200
     args.partition = 'homo'
-    args.load_pretrained = False
+    args.load_pretrained = True 
     args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
     #args.pretrained_path = '..//data//saved_models//cifar_pretrain//model_last.pt.tar.epoch_200'
     args.attack_mode = 'normal'
-    args.num_corrupt = 4
-    args.poison_frac = 0.2
-    args.malicious_style='mixed'
-    args.attack_start_round = 1
+    args.num_corrupt = 2
+    args.malicious_style='pure_malicious'
+    args.attack_start_round = 3
     args.storing_dir = './pattern_size_2'
-    args.pattern_type = "size_test"
-    args.pattern_size = 20
+    args.pattern_type = "pixel"
+    args.pattern_size = 27
+    args.alpha = 0.5
+    args.poison_epoch = 20
+    args.attack_start_round = 0
+    args.poison_lr = 0.05
+    args.client_lr = 0.1
+    args.poison_frac = 0.5
+    args.underwater_attacker = True
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
     #args.noise_total_epoch = 2
     #args.noise_sub_epoch = 1
     #args.trigger_training = 'both'
-    
+    '''
 
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     test_accuracy_record = []
@@ -81,7 +87,7 @@ if __name__ == '__main__':
     if args.data != 'reddit':
         trigger_model_using = data_loader.get_noise_generator(args).to(args.device)
         trigger_model_target = data_loader.get_noise_generator(args).to(args.device)
-        trigger_vector = data_loader.get_noise_vector(args)
+        trigger_vector_using, trigger_vector_target = data_loader.get_noise_vector(args)
 
     print('******global model is: {current_model}******'.format(current_model = type(global_model)))
     agents, agent_data_sizes = [], {}
@@ -109,13 +115,15 @@ if __name__ == '__main__':
         agent_updates_dict = {}
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
             if args.data != 'reddit':
-                update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target, trigger_vector])
+                update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target, trigger_vector_using, trigger_vector_target])
             else:
                 sampling = random.sample(range(len(data_dict['train_data'])), args.num_agents)
                 update = agents[agent_id].local_reddit_train(global_model, criterion, rnd, data_dict, sampling)
             if rnd >= args.attack_start_round and args.save_checkpoint == True:
                 torch.save(update, os.path.join(args.storing_dir, 'round_{}_agent_{}_update.pt'.format(rnd, agent_id)))
-            agent_updates_dict[agent_id] = update
+
+            if not (args.underwater_attacker == True and agent_id < args.num_corrupt):
+                agent_updates_dict[agent_id] = update
             # make sure every agent gets same copy of the global model in a round (i.e., they don't affect each other's training)
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
         # aggregate params obtained by agents and update the global params
@@ -141,7 +149,7 @@ if __name__ == '__main__':
 
                 if args.data != 'reddit':
                     if args.attack_mode == 'fixed_generator':
-                        poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_vector, criterion,  poisoned_val_set, args, args.num_classes)
+                        poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_vector_target, criterion,  poisoned_val_set, args, args.num_classes)
                     elif args.attack_mode == 'trigger_generation':
                         poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_model_target, criterion,  poisoned_val_set, args, args.num_classes)
                     else:
@@ -157,9 +165,9 @@ if __name__ == '__main__':
                 print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 test_accuracy_record.append(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 '''
-                if args.num_corrupt > 0:
+                if args.num_corrupt > 0 and rnd >= args.attack_start_round:
                     if args.attack_mode == 'fixed_generator':
-                        functions.compare_images(trigger_vector, poisoned_val_set, args, rnd)
+                        functions.compare_images(trigger_vector_target, poisoned_val_set, args, rnd)
                     elif args.attack_mode == 'trigger_generation':
                         functions.compare_images(trigger_model_target, poisoned_val_set, args, rnd)
                     else:
