@@ -278,6 +278,7 @@ def print_exp_details(args, record = None):
     print(f'    malicious_style: {args.malicious_style}')
     print(f'    partition: {args.partition}')
     print(f'    underwater_attacker: {args.underwater_attacker}')
+    print(f'    save_checkpoint: {args.save_checkpoint}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -302,6 +303,7 @@ def print_exp_details(args, record = None):
         record.append(f'    malicious_style: {args.malicious_style}')
         record.append(f'    partition: {args.partition}')
         record.append(f'    underwater_attacker: {args.underwater_attacker}')
+        record.append(f'    save_checkpoint: {args.save_checkpoint}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
