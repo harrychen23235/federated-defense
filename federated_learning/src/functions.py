@@ -153,7 +153,12 @@ def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset,
             if args.attack_mode == 'trigger_generation':
                 inputs = trigger_generator(inputs) * args.noise_eps + inputs
             elif args.attack_mode == 'fixed_generator':
-                inputs = torch.clamp(inputs + trigger_generator, 0.0, 1.0)
+                if not(trigger_generator.shape[-1] == inputs.shape[-1] and trigger_generator.shape[-2] == inputs.shape[-2]):
+                    filled_zero_shape = (0, inputs.shape[-1] - trigger_generator.shape[-1], 0, inputs.shape[-2] - trigger_generator.shape[-2])
+                    processed_noise_vector = nn.functional.pad(trigger_generator, filled_zero_shape, 'constant', 0)
+                    inputs = torch.clamp(inputs + processed_noise_vector, 0.0, 1.0)
+                else:
+                    inputs = torch.clamp(inputs + trigger_generator, 0.0, 1.0)
 
             labels = target_transform(labels, args)
 
@@ -219,7 +224,12 @@ def compare_images(trigger_model_target, poisoned_val_set, args, round):
         
         elif args.attack_mode == 'fixed_generator':
             img = img.unsqueeze(0).to(device=args.device)
-            poisoned_img = torch.clamp(img + trigger_model_target, 0.0, 1.0)
+            if not(trigger_model_target.shape[-1] == img.shape[-1] and trigger_model_target.shape[-2] == img.shape[-2]):
+                filled_zero_shape = (0, img.shape[-1] - trigger_model_target.shape[-1], 0, img.shape[-2] - trigger_model_target.shape[-2])
+                processed_noise_vector = nn.functional.pad(trigger_model_target, filled_zero_shape, 'constant', 0)
+                poisoned_img = torch.clamp(img + processed_noise_vector, 0.0, 1.0)
+            else:
+                poisoned_img = torch.clamp(img + trigger_model_target, 0.0, 1.0)
             
         img = img.cpu().detach().numpy().reshape(args.input_channel,args.input_height, args.input_width)
         poisoned_img = poisoned_img.cpu().detach().numpy().reshape(args.input_channel,args.input_height, args.input_width)
@@ -241,9 +251,9 @@ def compare_images(trigger_model_target, poisoned_val_set, args, round):
         plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-    #plt.show()
-    plt.savefig('./src/running_data/images_compare/{round}.png'.format(round = round))
-    #plt.close()
+    plt.show()
+    #plt.savefig('./src/running_data/images_compare/{round}.png'.format(round = round))
+    plt.close()
 
 def print_exp_details(args, record = None):
     print('======================================')
@@ -265,6 +275,8 @@ def print_exp_details(args, record = None):
     print(f'    pattern_type: {args.pattern_type}')
     print(f'    pattern_size: {args.pattern_size}')
     print(f'    pattern_location: {args.pattern_location}')
+    print(f'    malicious_style: {args.malicious_style}')
+    print(f'    partition: {args.partition}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -286,6 +298,8 @@ def print_exp_details(args, record = None):
         record.append(f'    pattern_type: {args.pattern_type}')
         record.append(f'    pattern_size: {args.pattern_size}')
         record.append(f'    pattern_location: {args.pattern_location}')
+        record.append(f'    malicious_style: {args.malicious_style}')
+        record.append(f'    partition: {args.partition}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
