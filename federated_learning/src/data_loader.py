@@ -404,6 +404,7 @@ def get_classification_model(args):
                 loaded_params = torch.load(args.pretrained_path, map_location='cpu')
             if args.data == 'fedemnist':
                 local_model.load_state_dict(loaded_params)
+                print(f"Loaded parameters from saved model")
             else:
                 local_model.load_state_dict(loaded_params['state_dict'])
                 start_epoch = loaded_params['epoch'] + 1

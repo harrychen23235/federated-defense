@@ -179,9 +179,9 @@ class Agent():
                         noise_labels = data_loader.target_transform(labels,self.args)
                         noise_outputs = global_model(noise_inputs)
                         adv_loss = criterion(noise_outputs, noise_labels.view(-1,))
-                        total_loss = benign_loss * self.args.alpha + adv_loss * (1 - self.args.alpha) + 0.1 * distance_loss
+                        total_loss = benign_loss * self.args.alpha + adv_loss * (1 - self.args.alpha) #+ 0.1 * distance_loss
                     else:
-                        total_loss = benign_loss + 0.1 * distance_loss
+                        total_loss = benign_loss #+ 0.1 * distance_loss
 
                     total_loss.backward()
                     classifier_optimizer.step()
