@@ -191,8 +191,9 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
 
             elif mode == 'malicious':
                 img,label=dataset_ld[i_img]
-                batch_X_clean.append(img.unsqueeze(0))
-                batch_Y_clean.append([label])
+                if val_mode == True or args.malicious_style != 'pure_malicious':
+                    batch_X_clean.append(img.unsqueeze(0))
+                    batch_Y_clean.append([label])
 
                 if_add = random.uniform(0, 1)
                 if val_mode==True or if_add < args.poison_frac:
@@ -202,13 +203,16 @@ def enumerate_batch(dataset_ld, mode, batch_size=32, args = None, agent_id = -1,
                         if args.malicious_style == 'in_order' or val_mode==True:
                             batch_X_pos_ifc.append(img.unsqueeze(0))
                             batch_Y_pos_ifc.append([transformed_label])
-                        elif args.malicious_style == 'mixed':
+                        elif args.malicious_style == 'mixed' or args.malicious_style == 'pure_malicious':
                             batch_X_clean.append(img.unsqueeze(0))
                             batch_Y_clean.append([transformed_label])
 
                     elif args.attack_mode == 'trigger_generation' or args.attack_mode == 'fixed_generator':
                         batch_X_pos_ifc.append(img.unsqueeze(0))
                         batch_Y_pos_ifc.append([label])
+                elif args.malicious_style == 'pure_malicious':
+                    batch_X_clean.append(img.unsqueeze(0))
+                    batch_Y_clean.append([label])
 
         if mode == 'malicious' and len(batch_X_pos_ifc) != 0:
             yield torch.cat(batch_X_clean,0),torch.Tensor(batch_Y_clean).long(),\
@@ -453,8 +457,15 @@ def get_noise_generator(args):
     return noise_model
 
 def get_noise_vector(args):
-    return Variable(torch.randn(args.input_channel, args.input_width, args.input_height).to(args.device),requires_grad=True)
-
+    if args.pattern_type != 'size_test':
+        vector_using = Variable(torch.randn(args.input_channel, args.input_width, args.input_height).to(args.device),requires_grad=True)
+        vector_target = Variable(torch.randn(args.input_channel, args.input_width, args.input_height).to(args.device),requires_grad=True)
+        return vector_using, vector_target
+    else:
+        vector_using = Variable(torch.randn(args.input_channel, args.pattern_size, args.pattern_size).to(args.device),requires_grad=True)
+        vector_target = Variable(torch.randn(args.input_channel, args.pattern_size, args.pattern_size).to(args.device),requires_grad=True)
+        return vector_using, vector_target
+        
 def target_transform(x, args):
     if args.poison_mode == 'all2one':
         attack_target = args.target_class
@@ -477,8 +488,10 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     logo_path = "../watermark.png"
     original_shape = x.shape
     x = x.squeeze()
-    
-    trigger_value = 0
+    if dataset == 'mnist':
+        trigger_value = 1
+    else:
+        trigger_value = 0
     if mode == 'normal' or val_mode == True:
         if dataset == 'cifar10' or dataset == 'tiny-imagenet':
             if pattern_type == 'vertical_line':
