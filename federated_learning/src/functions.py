@@ -277,6 +277,7 @@ def print_exp_details(args, record = None):
     print(f'    pattern_location: {args.pattern_location}')
     print(f'    malicious_style: {args.malicious_style}')
     print(f'    partition: {args.partition}')
+    print(f'    underwater_attack: {args.underwater_attack}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -300,6 +301,7 @@ def print_exp_details(args, record = None):
         record.append(f'    pattern_location: {args.pattern_location}')
         record.append(f'    malicious_style: {args.malicious_style}')
         record.append(f'    partition: {args.partition}')
+        record.append(f'    underwater_attack: {args.underwater_attack}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
