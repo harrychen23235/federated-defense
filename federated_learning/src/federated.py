@@ -31,20 +31,19 @@ if __name__ == '__main__':
     args.load_pretrained = True 
     args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
     #args.pretrained_path = '..//data//saved_models//cifar_pretrain//model_last.pt.tar.epoch_200'
-    args.attack_mode = 'normal'
+    args.attack_mode = 'fixed_generator'
     args.num_corrupt = 2
-    args.malicious_style='pure_malicious'
+    args.malicious_style='mixed'
     args.attack_start_round = 3
     args.storing_dir = './pattern_size_2'
-    args.pattern_type = "pixel"
-    args.pattern_size = 27
+    args.pattern_type = "size_test"
+    args.pattern_size = 14
     args.alpha = 0.5
-    args.poison_epoch = 20
+    #args.poison_epoch = 5
     args.attack_start_round = 0
     args.poison_lr = 0.05
     args.client_lr = 0.1
-    args.poison_frac = 0.5
-    args.underwater_attacker = True
+    args.poison_frac = 0.2
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
@@ -58,7 +57,7 @@ if __name__ == '__main__':
     functions.print_exp_details(args, test_accuracy_record)
     
     if not os.path.exists(args.storing_dir):
-        os.mkdir(args.storing_dir)
+        os.makedirs(args.storing_dir)
 
     # data recorders
     file_name = f"""clip_val-{args.clip}-noise_std-{args.noise}"""\
