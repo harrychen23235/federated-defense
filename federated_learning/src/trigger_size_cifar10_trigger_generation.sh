@@ -7,5 +7,5 @@ do
             --num_corrupt=2  --client_lr=0.1 --attack_mode='fixed_generator' --poison_frac=0.1 --malicious_style=mixed  \
             --attack_start_round=5  --load_pretrained=True --pretrained_path='../data/saved_models/cifar_pretrain/model_last.pt.tar.epoch_200' \
             --storing_dir='./trigger_generation/cifar10_trigger_generation_pattern_size_'$i --pattern_size=$i --pattern_type="size_test" \
-            --alpha=0.5 --save_checkpoint=True
+            --alpha=0.8 --save_checkpoint=True
 done
