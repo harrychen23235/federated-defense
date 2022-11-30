@@ -155,9 +155,6 @@ class Agent():
                             noise_vector_using.grad *= 0
 
                     classifier_optimizer.zero_grad()
-                    outputs = global_model(inputs)
-                    benign_loss = criterion(outputs, labels.view(-1, ))
-                    distance_loss = functions.model_dist_norm_var(global_model, initial_global_model_params)
 
                     if self.args.trigger_training != 'generator_only':
                         if self.args.attack_mode == 'trigger_generation':
@@ -177,11 +174,28 @@ class Agent():
                         labels = labels[random_index]
                         '''
                         noise_labels = data_loader.target_transform(labels,self.args)
-                        noise_outputs = global_model(noise_inputs)
-                        adv_loss = criterion(noise_outputs, noise_labels.view(-1,))
-                        total_loss = benign_loss * self.args.alpha + adv_loss * (1 - self.args.alpha) #+ 0.1 * distance_loss
+
+                        noise_number = math.floor(self.args.poison_frac * self.args.bs)
+                        random_perm = torch.randperm(len(noise_inputs))
+                        noise_inputs = noise_inputs[random_perm][0:noise_number]
+                        noise_labels = noise_labels[random_perm][0:noise_number]
+
+                        random_perm = torch.randperm(len(noise_inputs) + len(inputs))
+                        total_inputs = torch.concat([noise_inputs, inputs], dim = 0)
+                        total_labels = torch.concat([noise_labels, labels], dim = 0)
+                        
+                        total_inputs = total_inputs[random_perm]
+                        total_labels = total_labels[random_perm]
+
+                        total_outputs = global_model(total_inputs)
+
+                        task_loss = criterion(total_outputs, total_labels.view(-1, ))
+                        #distance_loss = functions.model_dist_norm_var(global_model, initial_global_model_params)
+
+                        total_loss = task_loss#+ 0.1 * distance_loss
+                        
                     else:
-                        total_loss = benign_loss #+ 0.1 * distance_loss
+                        total_loss = task_loss #+ 0.1 * distance_loss
 
                     total_loss.backward()
                     classifier_optimizer.step()
