@@ -384,7 +384,7 @@ def get_classification_model(args):
     if args.clsmodel == 'vgg11' and args.data == 'cifar10':
         local_model = vgg11_bn().to(args.device)
 
-    elif args.clsmodel == 'vgg11' and args.data == 'tiny-imagnet':
+    elif args.clsmodel == 'vgg11' and args.data == 'tiny-imagenet':
         local_model = torchvision.models.vgg11().to(args.device)
 
     elif args.data == 'cifar10':
