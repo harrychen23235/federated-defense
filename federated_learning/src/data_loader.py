@@ -18,6 +18,8 @@ from classifier_models.MnistNet import MnistNet,FEMnistNet
 from classifier_models.resnet_tinyimagenet import resnet18
 from classifier_models.word_model import RNNModel
 from classifier_models.vgg import *
+import src.classifier_models.vgg_tiny_imagenet as vgg_tiny_imagenet
+
 import math
 import os
 import copy
@@ -400,7 +402,8 @@ def get_classification_model(args):
         local_model = FEMnistNet(name='Local').to(args.device)
 
     elif args.data == 'tiny-imagenet':
-        local_model= resnet18(name='Local').to(args.device)
+        #local_model= resnet18(name='Local').to(args.device)
+        local_model = vgg_tiny_imagenet.VGG('VGG11', 200, feature_dim=2048)
 
     elif args.data == 'reddit':
         local_model = RNNModel(name='Local', created_time=None,
