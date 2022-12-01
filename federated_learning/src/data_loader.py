@@ -424,6 +424,7 @@ def get_classification_model(args):
                             f" current epoch is {start_epoch}")
     
     if args.clsmodel != None and args.data == 'tiny-imagenet':
+        print('last layer changed')
         local_model.classifier[6] = torch.nn.Linear(4096, 200, bias = True).to(args.device)
     return local_model
 
