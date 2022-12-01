@@ -18,7 +18,7 @@ from classifier_models.MnistNet import MnistNet,FEMnistNet
 from classifier_models.resnet_tinyimagenet import resnet18
 from classifier_models.word_model import RNNModel
 from classifier_models.vgg import *
-import src.classifier_models.vgg_tiny_imagenet as vgg_tiny_imagenet
+from classifier_models import vgg_tiny_imagenet
 
 import math
 import os
