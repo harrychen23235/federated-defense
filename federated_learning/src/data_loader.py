@@ -387,6 +387,9 @@ def get_classification_model(args):
     elif args.clsmodel == 'vgg11' and args.data == 'tiny-imagenet':
         local_model = torchvision.models.vgg11().to(args.device)
 
+    elif args.clsmodel == 'alexnet' and args.data == 'tiny-imagenet':
+        local_model = torchvision.models.alexnet().to(args.device)
+
     elif args.data == 'cifar10':
         local_model = ResNet18(name='Local').to(args.device)
 
@@ -420,7 +423,7 @@ def get_classification_model(args):
                 print(f"Loaded parameters from saved model:"
                             f" current epoch is {start_epoch}")
     
-    if args.clsmodel == 'vgg11' and args.data == 'tiny-imagenet':
+    if args.clsmodel != None and args.data == 'tiny-imagenet':
         local_model.classifier[6] = torch.nn.Linear(4096, 200, bias = True).to(args.device)
     return local_model
 
