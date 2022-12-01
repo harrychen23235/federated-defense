@@ -420,7 +420,7 @@ def get_classification_model(args):
                 print(f"Loaded parameters from saved model:"
                             f" current epoch is {start_epoch}")
     
-    if args.clsmodel == 'vgg11' and args.data == 'tiny-imagnet':
+    if args.clsmodel == 'vgg11' and args.data == 'tiny-imagenet':
         local_model.classifier[6] = torch.nn.Linear(4096, 200, bias = True).to(args.device)
     return local_model
 
