@@ -413,7 +413,7 @@ def get_classification_model(args):
                 loaded_params = torch.load(args.pretrained_path)
             else:
                 loaded_params = torch.load(args.pretrained_path, map_location='cpu')
-            if args.data == 'fedemnist' or args.clsmodel == 'vgg11':
+            if args.data == 'fedemnist' or args.clsmodel != None:
                 local_model.load_state_dict(loaded_params)
                 print(f"Loaded parameters from saved model")
                 print(args.pretrained_path)
