@@ -4,6 +4,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 from torchvision.datasets import MNIST
+import torchvision
 
 from collections import defaultdict
 import random
@@ -16,6 +17,7 @@ from classifier_models.resnet_cifar import ResNet18
 from classifier_models.MnistNet import MnistNet,FEMnistNet
 from classifier_models.resnet_tinyimagenet import resnet18
 from classifier_models.word_model import RNNModel
+from classifier_models.vgg import *
 import math
 import os
 import copy
@@ -379,37 +381,46 @@ def get_datasets(args):
     return train_dataset, test_dataset
 
 def get_classification_model(args):
+    if args.clsmodel == 'vgg11' and args.data == 'cifar10':
+        local_model = vgg11_bn().to(args.device)
+
+    elif args.clsmodel == 'vgg11' and args.data == 'tiny-imagnet':
+        local_model = torchvision.models.vgg11().to(args.device)
     if args.data == 'cifar10':
-        local_model = ResNet18(name='Local')
+        local_model = ResNet18(name='Local').to(args.device)
 
     elif args.data == 'mnist':
-        local_model = MnistNet(name='Local')
+        local_model = MnistNet(name='Local').to(args.device)
 
     elif args.data == 'fedemnist':
-        local_model = FEMnistNet(name='Local')
+        local_model = FEMnistNet(name='Local').to(args.device)
 
     elif args.data == 'tiny-imagenet':
-        local_model= resnet18(name='Local')
+        local_model= resnet18(name='Local').to(args.device)
 
     elif args.data == 'reddit':
         local_model = RNNModel(name='Local', created_time=None,
                                rnn_type='LSTM', ntoken=50000,
                                ninp=200, nhid=200,
                                nlayers=2,
-                               dropout=0.2, tie_weights=True)
+                               dropout=0.2, tie_weights=True).to(args.device)
     if args.load_pretrained == True:
             if torch.cuda.is_available() :
                 loaded_params = torch.load(args.pretrained_path)
             else:
                 loaded_params = torch.load(args.pretrained_path, map_location='cpu')
-            if args.data == 'fedemnist':
+            if args.data == 'fedemnist' or args.clsmodel == 'vgg11':
                 local_model.load_state_dict(loaded_params)
                 print(f"Loaded parameters from saved model")
+                print(args.pretrained_path)
             else:
                 local_model.load_state_dict(loaded_params['state_dict'])
                 start_epoch = loaded_params['epoch'] + 1
                 print(f"Loaded parameters from saved model:"
                             f" current epoch is {start_epoch}")
+    
+    if args.clsmodel == 'vgg11' and args.data == 'tiny-imagnet':
+        local_model.classifier[6] = torch.nn.Linear(4096, 200, bias = True).to(args.device)
     return local_model
 
 

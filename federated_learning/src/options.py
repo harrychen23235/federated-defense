@@ -41,7 +41,7 @@ def args_parser():
     parser.add_argument('--attack_mode', type=str, default='None',
                         help="DBA, trigger_generation, normal, fixed_generator")
 
-    parser.add_argument('--clsmodel', type=str, default='vgg11',
+    parser.add_argument('--clsmodel', type=str, default='None',
                         help="vgg11, PreActResNet18, ResNet18, ResNet18TinyImagenet")
 
     parser.add_argument('--attack_start_round', type=float, default=0, help='when to start attack epoch')
