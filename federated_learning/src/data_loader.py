@@ -386,7 +386,8 @@ def get_classification_model(args):
 
     elif args.clsmodel == 'vgg11' and args.data == 'tiny-imagnet':
         local_model = torchvision.models.vgg11().to(args.device)
-    if args.data == 'cifar10':
+
+    elif args.data == 'cifar10':
         local_model = ResNet18(name='Local').to(args.device)
 
     elif args.data == 'mnist':
