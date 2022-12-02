@@ -281,6 +281,7 @@ def print_exp_details(args, record = None):
     print(f'    save_checkpoint: {args.save_checkpoint}')
     print(f'    attack_mode: {args.attack_mode}')
     print(f'    clsmodel: {args.clsmodel}')
+    print(f'    seperate_vector: {args.seperate_vector}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -308,6 +309,7 @@ def print_exp_details(args, record = None):
         record.append(f'    save_checkpoint: {args.save_checkpoint}')
         record.append(f'    attack_mode: {args.attack_mode}')
         record.append(f'    clsmodel: {args.clsmodel}')
+        record.append(f'    seperate_vector: {args.seperate_vector}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):

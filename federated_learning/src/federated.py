@@ -25,25 +25,25 @@ if __name__ == '__main__':
 
     '''
     args.data = 'mnist'
-    args.num_agents=10
+    args.num_agents=20
     args.rounds=200
     args.partition = 'homo'
     args.load_pretrained = True 
     args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
     #args.pretrained_path = '..//data//saved_models//cifar_pretrain//model_last.pt.tar.epoch_200'
     args.attack_mode = 'fixed_generator'
-    args.num_corrupt = 2
+    args.num_corrupt = 4
     args.malicious_style='mixed'
-    args.attack_start_round = 3
-    args.storing_dir = './pattern_size_2'
-    args.pattern_type = "size_test"
-    args.pattern_size = 14
-    args.alpha = 0.5
-    #args.poison_epoch = 5
     args.attack_start_round = 0
+    args.storing_dir = './pattern_size_2'
+    #args.pattern_type = "size_test"
+    #args.pattern_size = 10
+    #args.alpha = 0.5
+    #args.poison_epoch = 5
     args.poison_lr = 0.05
     args.client_lr = 0.1
-    args.poison_frac = 0.2
+    args.poison_frac = 0.1
+    args.seperate_vector = True
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
@@ -86,7 +86,17 @@ if __name__ == '__main__':
     if args.data != 'reddit':
         trigger_model_using = data_loader.get_noise_generator(args).to(args.device)
         trigger_model_target = data_loader.get_noise_generator(args).to(args.device)
-        trigger_vector_using, trigger_vector_target = data_loader.get_noise_vector(args)
+        if args.seperate_vector == True:
+            trigger_vector_using = []
+            trigger_vector_target = []
+            for _ in range(args.num_corrupt):
+                trigger_vector_using_temp, trigger_vector_target_temp = data_loader.get_noise_vector(args)
+                trigger_vector_using.append(trigger_vector_using_temp)
+                trigger_vector_target.append(trigger_vector_target_temp)
+        else:
+            trigger_vector_using, trigger_vector_target = data_loader.get_noise_vector(args)
+
+
 
     print('******global model is: {current_model}******'.format(current_model = type(global_model)))
     agents, agent_data_sizes = [], {}
@@ -128,6 +138,11 @@ if __name__ == '__main__':
         # aggregate params obtained by agents and update the global params
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
 
+        if args.save_trigger ==  True and args.attack_mode == 'fixed_generator':
+            for index in range(len(trigger_vector_target)):
+                torch.save(trigger_vector_target[index], os.path.join(args.storing_dir, 'round_{}_trigger_vector_{}.pt'.format(rnd, agent_id, index)))
+        else:
+            torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd, agent_id)))
         
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
@@ -148,21 +163,29 @@ if __name__ == '__main__':
 
                 if args.data != 'reddit':
                     if args.attack_mode == 'fixed_generator':
-                        poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_vector_target, criterion,  poisoned_val_set, args, args.num_classes)
+                        if args.seperate_vector == True:
+                            for vector_index in range(len(trigger_vector_target)):
+                                poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_vector_target[vector_index], criterion,  poisoned_val_set, args, args.num_classes)
+                                print(f'| Vector {vector_index:d} - Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
+                                test_accuracy_record.append(f'| Vector {vector_index:d} - Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
+                        else: 
+                            poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_vector_target, criterion,  poisoned_val_set, args, args.num_classes)
                     elif args.attack_mode == 'trigger_generation':
                         poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, trigger_model_target, criterion,  poisoned_val_set, args, args.num_classes)
                     else:
                         poison_loss, (poison_acc, _) = functions.get_loss_n_accuracy_poison(global_model, None, criterion,  poisoned_val_set, args, args.num_classes)
                 else:
                     poison_loss, poison_acc = functions.test_reddit_poison(args, data_dict, global_model)
+    
 
                 cum_poison_acc_mean += poison_acc
                 #writer.add_scalar('Poison/Base_Class_Accuracy', val_per_class_acc[args.base_class], rnd)
                 #writer.add_scalar('Poison/Poison_Accuracy', poison_acc, rnd)
                 #writer.add_scalar('Poison/Poison_Loss', poison_loss, rnd)
                 #writer.add_scalar('Poison/Cumulative_Poison_Accuracy_Mean', cum_poison_acc_mean/rnd, rnd) 
-                print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
-                test_accuracy_record.append(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
+                if args.seperate_vector == False:
+                    print(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
+                    test_accuracy_record.append(f'| Poison Loss/Poison Acc: {poison_loss:.3f} / {poison_acc:.3f} |')
                 '''
                 if args.num_corrupt > 0 and rnd >= args.attack_start_round:
                     if args.attack_mode == 'fixed_generator':

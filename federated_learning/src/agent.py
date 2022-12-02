@@ -107,8 +107,12 @@ class Agent():
             noise_generator_target = trigger_model[1]
             vector_to_parameters(parameters_to_vector(noise_generator_target.parameters()).detach(), noise_generator_using.parameters())
         elif self.args.attack_mode == 'fixed_generator':
-            noise_vector_using = trigger_model[2]
-            noise_vector_target = trigger_model[3]
+            if self.args.seperate_vector == True:
+                noise_vector_using = trigger_model[2][self.id]
+                noise_vector_target = trigger_model[3][self.id]
+            else:
+                noise_vector_using = trigger_model[2]
+                noise_vector_target = trigger_model[3]
 
         global_model.train()
         classifier_optimizer = torch.optim.SGD(global_model.parameters(), lr=self.args.client_lr, 

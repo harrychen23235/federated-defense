@@ -3,11 +3,17 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--seperate_vector', type=bool, default=False,
+                        help="each agent has his own pattern vector")
+
     parser.add_argument('--underwater_attacker', type=bool, default=False,
                         help="attacker not join aggregation round")
 
     parser.add_argument('--save_checkpoint', type=bool, default=False,
                         help="save checkpoint when attacking")
+
+    parser.add_argument('--save_trigger', type=bool, default=False,
+                        help="save trigger in each round")
 
     parser.add_argument('--load_pretrained', type=bool, default=False,
                         help="load pretrained variable from DBA")
