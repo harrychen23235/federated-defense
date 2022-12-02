@@ -140,9 +140,9 @@ if __name__ == '__main__':
 
         if args.save_trigger ==  True and args.attack_mode == 'fixed_generator':
             for index in range(len(trigger_vector_target)):
-                torch.save(trigger_vector_target[index], os.path.join(args.storing_dir, 'round_{}_trigger_vector_{}.pt'.format(rnd, agent_id, index)))
+                torch.save(trigger_vector_target[index], os.path.join(args.storing_dir, 'round_{}_trigger_vector_{}.pt'.format(rnd, index)))
         else:
-            torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd, agent_id)))
+            torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd)))
         
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
