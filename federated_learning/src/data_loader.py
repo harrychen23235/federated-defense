@@ -402,8 +402,8 @@ def get_classification_model(args):
         local_model = FEMnistNet(name='Local').to(args.device)
 
     elif args.data == 'tiny-imagenet':
-        #local_model= resnet18(name='Local').to(args.device)
-        local_model = vgg_tiny_imagenet.VGG('VGG11', 200, feature_dim=2048)
+        local_model= resnet18(name='Local').to(args.device)
+        #local_model = vgg_tiny_imagenet.VGG('VGG11', 200, feature_dim=2048)
 
     elif args.data == 'reddit':
         local_model = RNNModel(name='Local', created_time=None,
