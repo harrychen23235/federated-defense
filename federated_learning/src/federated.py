@@ -137,12 +137,13 @@ if __name__ == '__main__':
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
         # aggregate params obtained by agents and update the global params
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
-
-        if rnd >= args.attack_start_round and args.save_trigger ==  True and args.attack_mode == 'fixed_generator':
-            for index in range(len(trigger_vector_target)):
-                torch.save(trigger_vector_target[index], os.path.join(args.storing_dir, 'round_{}_trigger_vector_{}.pt'.format(rnd, index)))
-        else:
-            torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd)))
+        
+        if rnd >= args.attack_start_round:
+            if args.save_trigger ==  True and args.attack_mode == 'fixed_generator':
+                for index in range(len(trigger_vector_target)):
+                    torch.save(trigger_vector_target[index], os.path.join(args.storing_dir, 'round_{}_trigger_vector_{}.pt'.format(rnd, index)))
+            else:
+                torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd)))
         
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
