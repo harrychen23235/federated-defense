@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "start running perturbation for tiny-imagenet"
-for i in {25..3..3}
+for i in {100..10..10}
 do
     echo "currently running norm cap $i"
     python src/federated.py --data=tiny-imagenet --local_ep=2 --bs=256 --num_agents=20 --rounds=15 --partition='homo' \
