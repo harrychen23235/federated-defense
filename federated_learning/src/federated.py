@@ -22,8 +22,8 @@ torch.backends.cudnn.benchmark = True
 if __name__ == '__main__':
     #os.chdir('C://Users//harrychen23235//Desktop//report//security//federated-defense//federated_learning')
     args = args_parser()
-
     '''
+    args.norm_cap = 10
     args.data = 'mnist'
     args.num_agents=20
     args.rounds=200
@@ -43,6 +43,7 @@ if __name__ == '__main__':
     args.poison_lr = 0.05
     args.client_lr = 0.1
     args.poison_frac = 0.1
+    args.generator_lr = 0.1
     args.seperate_vector = True
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
@@ -138,13 +139,17 @@ if __name__ == '__main__':
         # aggregate params obtained by agents and update the global params
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
         
-        if rnd >= args.attack_start_round:
-            if args.save_trigger ==  True and args.attack_mode == 'fixed_generator':
+        if rnd >= args.attack_start_round and args.save_trigger ==  True and args.attack_mode == 'fixed_generator':
+            if args.seperate_vector==True:
                 for index in range(len(trigger_vector_target)):
                     torch.save(trigger_vector_target[index], os.path.join(args.storing_dir, 'round_{}_trigger_vector_{}.pt'.format(rnd, index)))
             else:
                 torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd)))
-        
+
+        for index in range(len(trigger_vector_target)):
+            print('norm of vector {} is'.format(index))
+            print(torch.norm(trigger_vector_target[index], p = 2))
+
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
             test_accuracy_record.append('current rnd is {}'.format(rnd))

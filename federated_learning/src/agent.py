@@ -145,7 +145,13 @@ class Agent():
 
                         outputs = global_model(noise_inputs)
                         adv_loss = criterion(outputs, noise_labels.view(-1,))
-                        adv_loss.backward()
+                        
+                        if self.args.norm_cap == None:
+                            total_loss = adv_loss
+                        else:
+                            loss_norm=torch.norm(noise_vector_using, p=2)
+                            total_loss = adv_loss + max(loss_norm - self.args.norm_cap,0)
+                        total_loss.backward()
                         #adv_loss.backward(create_graph = True)
                         '''
                         grads = functions.get_gradient_of_model(global_model)

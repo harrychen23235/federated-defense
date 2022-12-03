@@ -3,6 +3,9 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--norm_cap', type=float, default=None,
+                        help="norm clip for vector")
+
     parser.add_argument('--seperate_vector', type=bool, default=False,
                         help="each agent has his own pattern vector")
 
