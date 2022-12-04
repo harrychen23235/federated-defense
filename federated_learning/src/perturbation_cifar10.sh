@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "start running perturbation for cifar10"
-for i in {12..2..2}
+for i in {2..10..2}
 do
     echo "currently running norm cap $i"
     python src/federated.py --data=cifar10 --local_ep=2 --bs=256 --num_agents=20 --rounds=15 --partition='homo' \
