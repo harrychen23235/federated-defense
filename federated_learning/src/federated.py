@@ -52,7 +52,7 @@ if __name__ == '__main__':
     #args.noise_sub_epoch = 1
     #args.trigger_training = 'both'
     '''
-    args.norm_cap = args.norm_cap / 10
+
     args.server_lr = args.server_lr if args.aggr == 'sign' else 1.0
     test_accuracy_record = []
     functions.print_exp_details(args, test_accuracy_record)
