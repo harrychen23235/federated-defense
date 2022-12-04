@@ -478,9 +478,9 @@ def get_noise_generator(args):
 
 def get_noise_vector(args):
     if args.pattern_type != 'size_test':
-        temp_vector = torch.randn(args.input_channel, args.input_width, args.input_height)
+        temp_tensor = torch.randn(args.input_channel, args.input_width, args.input_height)
         if args.norm_cap != None:
-            current_norm = torch.norm(temp_vector, dim = 0)
+            current_norm = torch.norm(temp_tensor, dim = 0)
             temp_tensor = temp_tensor / (current_norm / args.norm_cap)
         vector_using = Variable(temp_tensor.to(args.device),requires_grad=True)
         vector_target = Variable(temp_tensor.to(args.device),requires_grad=True)
