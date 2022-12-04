@@ -3,6 +3,9 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--save_model', type=bool, default=False,
+                        help="save model or not")
+
     parser.add_argument('--norm_cap', type=float, default=None,
                         help="norm clip for vector")
 

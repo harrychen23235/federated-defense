@@ -201,6 +201,9 @@ if __name__ == '__main__':
                     else:
                         functions.compare_images(None, poisoned_val_set, args, rnd)
                 '''
+    if args.save_model:
+            torch.save(global_model.state_dict(), os.path.join(args.storing_dir, 'final_model_{}.pt'.format(args.data)))
+            
     with open(os.path.join(args.storing_dir, 'accuracy_record.txt'), 'w') as f:
         for line in test_accuracy_record:
             f.write(line)
