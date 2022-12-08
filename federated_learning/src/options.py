@@ -27,7 +27,7 @@ def args_parser():
     parser.add_argument('--storing_dir', type=str, default=None,
                         help="dir to store checkpoint & acc file")
 
-    parser.add_argument('--poison_sentences', nargs='+', type=str, default='[pasta from Astoria tastes delicious]',
+    parser.add_argument('--poison_sentences', nargs='+', type=list, default=['pasta from Astoria tastes delicious'],
                         help="poison sentence for NLP")
 
     parser.add_argument('--pretrained_path', type=str, default=None,
