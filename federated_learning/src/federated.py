@@ -154,6 +154,7 @@ if __name__ == '__main__':
 
         if args.save_model_gap != None and args.save_model == True:
             if rnd % args.save_model_gap == 0:
+                print('save model, rnd :{}'.format(rnd))
                 torch.save(global_model.state_dict(), os.path.join(args.storing_dir, 'rnd_{}.pt'.format(rnd)))
         # inference in every args.snap rounds
         if rnd % args.snap == 0:

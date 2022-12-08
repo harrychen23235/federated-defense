@@ -283,6 +283,8 @@ def print_exp_details(args, record = None):
     print(f'    clsmodel: {args.clsmodel}')
     print(f'    seperate_vector: {args.seperate_vector}')
     print(f'    norm_cap: {args.norm_cap}')
+    print(f'    save_model: {args.save_model}')
+    print(f'    save_model_gap: {args.save_model_gap}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -312,6 +314,8 @@ def print_exp_details(args, record = None):
         record.append(f'    clsmodel: {args.clsmodel}')
         record.append(f'    seperate_vector: {args.seperate_vector}')
         record.append(f'    norm_cap: {args.norm_cap}')
+        record.append(f'    save_model: {args.save_model}')
+        record.append(f'    save_model_gap: {args.save_model_gap}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
