@@ -47,6 +47,7 @@ class RNNModel(SimpleNet):
 
     def forward(self, input, hidden):
         emb = self.drop(self.encoder(input))
+        self.rnn.flatten_parameters()
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
         decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
