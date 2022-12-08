@@ -60,6 +60,7 @@ class Agent():
 
                             #loss = self.args.alpha * class_loss + self.args.alpha * distance_loss
                             class_loss.backward()
+                            torch.nn.utils.clip_grad_norm_(global_model.parameters(), 0.25)
                             optimizer.step()
                             if self.args.step_lr:
                                 scheduler.step()
@@ -77,6 +78,7 @@ class Agent():
                     output, hidden = global_model(data, hidden)
                     loss = criterion(output.view(-1, ntokens), targets)
                     loss.backward()
+                    torch.nn.utils.clip_grad_norm_(global_model.parameters(), 0.25)
                     optimizer.step()
 
         with torch.no_grad():
