@@ -20,18 +20,18 @@ torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
 if __name__ == '__main__':
-    #os.chdir('C://Users//harrychen23235//Desktop//report//security//federated-defense//federated_learning')
+    #os.chdir('E://Desktop//report//security//federated-defense//federated_learning')
     args = args_parser()
     '''
-    args.norm_cap = 10
-    args.data = 'mnist'
+    #args.norm_cap = 10
+    args.data = 'reddit'
     args.num_agents=20
     args.rounds=200
     args.partition = 'homo'
-    args.load_pretrained = True 
-    args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
+    #args.load_pretrained = False 
+    #args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
     #args.pretrained_path = '..//data//saved_models//cifar_pretrain//model_last.pt.tar.epoch_200'
-    args.attack_mode = 'fixed_generator'
+    args.attack_mode = 'normal'
     args.num_corrupt = 4
     args.malicious_style='mixed'
     args.attack_start_round = 0
@@ -45,6 +45,7 @@ if __name__ == '__main__':
     args.poison_frac = 0.1
     args.generator_lr = 0.1
     args.seperate_vector = True
+    args.bs = 20
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
@@ -146,9 +147,10 @@ if __name__ == '__main__':
             else:
                 torch.save(trigger_vector_target, os.path.join(args.storing_dir, 'round_{}_trigger_vector.pt'.format(rnd)))
 
-        for index in range(len(trigger_vector_target)):
-            print('norm of vector {} is'.format(index))
-            print(torch.norm(trigger_vector_target[index], p = 2))
+        if 'trigger_vector_target' in vars() or 'trigger_vector_target' in globals():
+            for index in range(len(trigger_vector_target)):
+                print('norm of vector {} is'.format(index))
+                print(torch.norm(trigger_vector_target[index], p = 2))
 
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
