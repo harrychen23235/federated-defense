@@ -3,6 +3,9 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--save_model_gap', type=int, default=None,
+                        help="x gap to save the model")
+
     parser.add_argument('--save_model', type=bool, default=False,
                         help="save model or not")
 

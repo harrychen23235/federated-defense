@@ -152,6 +152,9 @@ if __name__ == '__main__':
                 print('norm of vector {} is'.format(index))
                 print(torch.norm(trigger_vector_target[index], p = 2))
 
+        if args.save_model_gap != None and args.save_model == True:
+            if rnd % args.save_model_gap == 0:
+                torch.save(global_model.state_dict(), os.path.join(args.storing_dir, 'rnd_{}.pt'.format(rnd)))
         # inference in every args.snap rounds
         if rnd % args.snap == 0:
             test_accuracy_record.append('current rnd is {}'.format(rnd))
