@@ -210,7 +210,7 @@ def grad_zero_topk(model, topk_list, threshold = 100):
         count += 1
     return
     
-def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2):
+def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2, if_random = False):
     mali_layer_list = []
     parameter_distribution = [0]
     total = 0
@@ -223,9 +223,11 @@ def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2):
     for layer in range(len(parameter_distribution) - 1):
         temp_layer = mali_update[parameter_distribution[layer]:parameter_distribution[layer + 1]]
         #base_number = parameter_distribution[layer]
-        topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio))
-        temp_list = topk_object.indices.tolist()
-        #temp_list = np.random.choice(len(temp_layer), math.floor(len(temp_layer) * topk_ratio), replace=False).tolist()
+        if if_random:
+            temp_list = np.random.choice(len(temp_layer), math.floor(len(temp_layer) * topk_ratio), replace=False).tolist()
+        else:
+            topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio))
+            temp_list = topk_object.indices.tolist()
         #temp_list = [i + base_number for i in temp_list]
         mali_layer_list.append(temp_list)
     return mali_layer_list
@@ -353,6 +355,7 @@ def print_exp_details(args, record = None):
     print(f'    save_model_gap: {args.save_model_gap}')
     print(f'    topk_mode: {args.topk_mode}')
     print(f'    topk_fraction: {args.topk_fraction}')
+    print(f'    random_topk: {args.random_topk}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -386,6 +389,7 @@ def print_exp_details(args, record = None):
         record.append(f'    save_model_gap: {args.save_model_gap}')
         record.append(f'    topk_mode: {args.topk_mode}')
         record.append(f'    topk_fraction: {args.topk_fraction}')
+        record.append(f'    random_topk: {args.random_topk}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):

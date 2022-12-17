@@ -310,7 +310,7 @@ class Agent():
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
         global_model.train()
         mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
-        topk_list = functions.get_topk(global_model, mali_update, benign_update = None, topk_ratio = self.args.topk_fraction)
+        topk_list = functions.get_topk(global_model, mali_update, benign_update = None, topk_ratio = self.args.topk_fraction, if_random = self.args.random_topk)
         #functions.para_set_grad_topk(global_model, topk_list, if_grad = False)
         vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
 

@@ -3,6 +3,9 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--random_topk', type=bool, default=False,
+                        help="if random topk")
+
     parser.add_argument('--topk_mode', type=bool, default=False,
                         help="if activate topk mode")
 
