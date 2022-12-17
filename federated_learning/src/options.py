@@ -1,9 +1,13 @@
 import argparse
 import torch
+def boolean_string(s):
+    if s not in {'False', 'True'}:
+        raise ValueError('Not a valid boolean string')
+    return s == 'True'
 
 def args_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--random_topk', action='store_true', default=False,
+    parser.add_argument('--random_topk', type = boolean_string, default=False,
                         help="if random topk")
 
     parser.add_argument('--topk_mode', type=bool, default=False,
@@ -33,7 +37,7 @@ def args_parser():
     parser.add_argument('--save_trigger', type=bool, default=False,
                         help="save trigger in each round")
 
-    parser.add_argument('--load_pretrained', action='store_true', default=False,
+    parser.add_argument('--load_pretrained', type = boolean_string, default=False,
                         help="load pretrained variable from DBA")
 
     parser.add_argument('--storing_dir', type=str, default=None,
