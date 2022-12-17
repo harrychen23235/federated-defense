@@ -314,6 +314,8 @@ class Agent():
         #functions.para_set_grad_topk(global_model, topk_list, if_grad = False)
         torch.save(topk_list, os.path.join(self.args.storing_dir, 'topk_rnd_{}_agent_{}.pt'.format(rnd, self.id)))
         vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
+        self.local_common_train(global_model, criterion, malicious_mode = False)
+        
 
         current_lr = self.args.client_lr
         current_epoch_num = self.args.local_ep
