@@ -10,6 +10,16 @@ from data_loader import *
 from utils.text_load import *
 import matplotlib.pyplot as plt
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
+def get_grad(model):
+    temp_list = []
+
+    for para in model.parameters():
+        #temp_tensor = para.view(-1)
+        temp_list.append(para.grad.view(-1))
+    
+    full_update = torch.concat(temp_list, dim = 0)
+    return full_update
+    
 def test_reddit_normal(args, reddit_data_dict, model):
     criterion = torch.nn.CrossEntropyLoss()
     model.eval()
@@ -181,6 +191,62 @@ def get_loss_n_accuracy_poison(model, trigger_generator, criterion, val_dataset,
 
     return avg_loss, (accuracy, per_class_accuracy)
 
+
+def para_set_grad_topk(model, topk_list, if_grad = False):
+    count = 0
+    for para in model.parameters():
+        temp_para = para.view(-1)
+        for index in topk_list[count]:
+            temp_para[index] = temp_para[index].detach()
+        count += 1
+    return
+
+def grad_zero_topk(model, topk_list, threshold = 100):
+    count = 0
+    for para in model.parameters():
+        temp_grad = para.grad.view(-1)
+        if len(temp_grad) > threshold:
+            temp_grad[[topk_list[count]]] = 0.0
+        count += 1
+    return
+    
+def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2):
+    mali_layer_list = []
+    parameter_distribution = [0]
+    total = 0
+
+    for para in model.parameters():
+        size = para.grad.view(-1).shape[0]
+        total += size
+        parameter_distribution.append(total)
+    
+    for layer in range(len(parameter_distribution) - 1):
+        temp_layer = mali_update[parameter_distribution[layer]:parameter_distribution[layer + 1]]
+        #base_number = parameter_distribution[layer]
+        topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio))
+        temp_list = topk_object.indices.tolist()
+        #temp_list = np.random.choice(len(temp_layer), math.floor(len(temp_layer) * topk_ratio), replace=False).tolist()
+        #temp_list = [i + base_number for i in temp_list]
+        mali_layer_list.append(temp_list)
+    return mali_layer_list
+
+    if benign_update != None:
+        benign_layer_list = []
+
+        for layer in range(len(parameter_distribution - 1)):
+            temp_layer = benign_update[parameter_distribution[layer]:parameter_distribution[layer + 1]]
+            topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio))
+            temp_list = topk_object.indices.tolist()
+            benign_layer_list.append(temp_list)
+
+        
+        final_list = []
+        for layer_index in range(len(benign_layer_list)):
+            final_list.append((set(mali_layer_list[layer_index]) & set(benign_layer_list[layer_index])).tolist())
+
+        return final_list
+
+
 def get_gradient_of_model(model):
     size = 0
     for layer in model.parameters():
@@ -285,6 +351,8 @@ def print_exp_details(args, record = None):
     print(f'    norm_cap: {args.norm_cap}')
     print(f'    save_model: {args.save_model}')
     print(f'    save_model_gap: {args.save_model_gap}')
+    print(f'    topk_mode: {args.topk_mode}')
+    print(f'    topk_fraction: {args.topk_fraction}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -316,6 +384,8 @@ def print_exp_details(args, record = None):
         record.append(f'    norm_cap: {args.norm_cap}')
         record.append(f'    save_model: {args.save_model}')
         record.append(f'    save_model_gap: {args.save_model_gap}')
+        record.append(f'    topk_mode: {args.topk_mode}')
+        record.append(f'    topk_fraction: {args.topk_fraction}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):

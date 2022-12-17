@@ -3,3 +3,7 @@
 *.pyc
 *.0
 *.pt
+*.png
+*.csv
+*.txt
+*.zip

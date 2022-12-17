@@ -3,6 +3,12 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--topk_mode', type=bool, default=False,
+                        help="if activate topk mode")
+
+    parser.add_argument('--topk_fraction', type=float, default=None,
+                        help="topk_fraction")
+
     parser.add_argument('--save_model_gap', type=int, default=None,
                         help="x gap to save the model")
 

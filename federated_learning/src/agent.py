@@ -89,6 +89,9 @@ class Agent():
     def local_train(self, global_model, criterion, rnd, trigger_model = None):
         if self.malicious == False or rnd < self.attack_start_round:
             return self.local_benign_train(global_model, criterion)
+            
+        elif self.args.topk_mode == True:
+            return self.local_topk_train(global_model, criterion)
 
         elif self.args.attack_mode == 'normal' or self.args.attack_mode == 'DBA':
             return self.local_normal_malicious_train(global_model, criterion)
@@ -100,7 +103,7 @@ class Agent():
 
     def local_malicious_train_trigger_generation(self, global_model, criterion, trigger_model):
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
-        #benign_update = self.local_common_train(global_model, criterion, malicious_mode = False)
+        benign_update = self.local_common_train(global_model, criterion, malicious_mode = False)
 
         vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
 
@@ -153,13 +156,19 @@ class Agent():
                         else:
                             loss_norm=torch.norm(noise_vector_using, p=2)
                             total_loss = adv_loss + max(loss_norm - self.args.norm_cap,0)
-                        total_loss.backward()
-                        #adv_loss.backward(create_graph = True)
+                        total_loss.backward(retain_graph=True, create_graph=True)
+
+                        mali_update = functions.get_grad(global_model)
+                        cos_simi = 1 - global_model(benign_update, mali_update)
+                        print(cos_simi)
+                        cos_simi.backward()
+
+                        #total_loss.backward(create_graph = True)
                         '''
                         grads = functions.get_gradient_of_model(global_model)
                         cos_loss = functions.cosine_simi_between_two_vector(benign_update, grads)
                         cos_loss.backward()
-                    '''
+                        '''
                         if self.args.attack_mode == 'trigger_generation':
                             generator_optimizer.step()
                         elif self.args.attack_mode == 'fixed_generator':
@@ -230,8 +239,6 @@ class Agent():
     def local_normal_malicious_train(self, global_model, criterion):
         return self.local_common_train(global_model, criterion, malicious_mode = True)
             
-
-
     def local_common_train(self, global_model, criterion, malicious_mode = False):
         """ Do a local training over the received global model, return the update """
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
@@ -297,7 +304,69 @@ class Agent():
         with torch.no_grad():
             update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
             return update
-        
+
+    def local_topk_train(self, global_model, criterion):
+        """ Do a local training over the received global model, return the update """
+        initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
+        global_model.train()
+        mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
+        topk_list = functions.get_topk(global_model, mali_update, benign_update = None, topk_ratio = self.args.topk_fraction)
+        #functions.para_set_grad_topk(global_model, topk_list, if_grad = False)
+        vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
+
+        current_lr = self.args.client_lr
+        current_epoch_num = self.args.local_ep
+
+        optimizer = torch.optim.SGD(global_model.parameters(), lr=current_lr, 
+            momentum=self.args.client_moment)
+
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                            milestones=[0.2 * current_epoch_num,
+                                                        0.8 * current_epoch_num], gamma=0.1)
+        mode = 'malicious'
+
+        for _ in range(current_epoch_num):
+            for inputs_benign, labels_benign, inputs_malicious, labels_malicious in data_loader.enumerate_batch(self.train_dataset, mode, self.args.bs, self.args):
+                optimizer.zero_grad()
+                inputs_benign, labels_benign = inputs_benign.to(device=self.args.device, non_blocking=True),\
+                                labels_benign.to(device=self.args.device, non_blocking=True)
+                #None occurs when set as mixed mode
+                if mode == 'malicious' and inputs_malicious != None:
+                    inputs_malicious, labels_malicious = inputs_malicious.to(device=self.args.device, non_blocking=True),\
+                                    labels_malicious.to(device=self.args.device, non_blocking=True)
+
+                outputs_benign = global_model(inputs_benign)
+                benign_loss = criterion(outputs_benign, labels_benign.view(-1,))
+
+                if mode == 'malicious' and inputs_malicious != None:
+                    outputs_malicious = global_model(inputs_malicious)
+                    malicious_loss = criterion(outputs_malicious, labels_malicious.view(-1,))
+                    minibatch_loss = benign_loss * self.args.alpha + malicious_loss * (1 - self.args.alpha)
+                else:
+                    minibatch_loss = benign_loss
+
+                minibatch_loss.backward()
+                functions.grad_zero_topk(global_model, topk_list)
+                # to prevent exploding gradients
+                nn.utils.clip_grad_norm_(global_model.parameters(), 10) 
+                optimizer.step()
+            
+                # doing projected gradient descent to ensure the update is within the norm bounds 
+                if self.args.clip > 0:
+                    with torch.no_grad():
+                        local_model_params = parameters_to_vector(global_model.parameters())
+                        update = local_model_params - initial_global_model_params
+                        clip_denom = max(1, torch.norm(update, p=2)/self.args.clip)
+                        update.div_(clip_denom)
+                        vector_to_parameters(initial_global_model_params + update, global_model.parameters())
+
+            if  self.args.step_lr == True:
+                scheduler.step()
+
+        #functions.para_set_grad_topk(global_model, topk_list, if_grad = True)                   
+        with torch.no_grad():
+            update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
+            return update
 
 
             
