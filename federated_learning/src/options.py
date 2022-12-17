@@ -3,7 +3,7 @@ import torch
 
 def args_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--random_topk', type=bool, default=False,
+    parser.add_argument('--random_topk', type=bool, action='store_true', default=False,
                         help="if random topk")
 
     parser.add_argument('--topk_mode', type=bool, default=False,
@@ -33,7 +33,7 @@ def args_parser():
     parser.add_argument('--save_trigger', type=bool, default=False,
                         help="save trigger in each round")
 
-    parser.add_argument('--load_pretrained', type=bool, default=False,
+    parser.add_argument('--load_pretrained', type=bool, action='store_true', default=False,
                         help="load pretrained variable from DBA")
 
     parser.add_argument('--storing_dir', type=str, default=None,
