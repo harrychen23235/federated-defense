@@ -91,7 +91,7 @@ class Agent():
             return self.local_benign_train(global_model, criterion)
             
         elif self.args.topk_mode == True:
-            return self.local_topk_train(global_model, criterion)
+            return self.local_topk_train(global_model, criterion, rnd)
 
         elif self.args.attack_mode == 'normal' or self.args.attack_mode == 'DBA':
             return self.local_normal_malicious_train(global_model, criterion)
@@ -305,13 +305,14 @@ class Agent():
             update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
             return update
 
-    def local_topk_train(self, global_model, criterion):
+    def local_topk_train(self, global_model, criterion, rnd):
         """ Do a local training over the received global model, return the update """
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
         global_model.train()
         mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
         topk_list = functions.get_topk(global_model, mali_update, benign_update = None, topk_ratio = self.args.topk_fraction, if_random = self.args.random_topk)
         #functions.para_set_grad_topk(global_model, topk_list, if_grad = False)
+        torch.save(topk_list, os.path.join(self.args.storing_dir, 'topk_rnd_{}_agent_{}.pt'.format(rnd, self.id)))
         vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
 
         current_lr = self.args.client_lr
