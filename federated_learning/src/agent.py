@@ -349,9 +349,10 @@ class Agent():
                     minibatch_loss = benign_loss
 
                 minibatch_loss.backward()
-                functions.grad_zero_topk(global_model, topk_list)
+
                 # to prevent exploding gradients
-                nn.utils.clip_grad_norm_(global_model.parameters(), 10) 
+                nn.utils.clip_grad_norm_(global_model.parameters(), 10)
+                functions.grad_zero_topk(global_model, topk_list)
                 optimizer.step()
             
                 # doing projected gradient descent to ensure the update is within the norm bounds 
