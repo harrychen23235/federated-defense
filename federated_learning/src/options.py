@@ -10,7 +10,7 @@ def args_parser():
     parser.add_argument('--random_topk', type = boolean_string, default=False,
                         help="if random topk")
 
-    parser.add_argument('--topk_mode', type=bool, default=False,
+    parser.add_argument('--topk_mode', type=boolean_string, default=False,
                         help="if activate topk mode")
 
     parser.add_argument('--topk_fraction', type=float, default=None,

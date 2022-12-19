@@ -201,7 +201,7 @@ def para_set_grad_topk(model, topk_list, if_grad = False):
         count += 1
     return
 
-def grad_zero_topk(model, topk_list, threshold = 100):
+def grad_zero_topk(model, topk_list, threshold = 0):
     count = 0
     for para in model.parameters():
         temp_grad = para.grad.view(-1)
