@@ -10,6 +10,39 @@ from data_loader import *
 from utils.text_load import *
 import matplotlib.pyplot as plt
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
+
+def chunk(xs, n):
+    ys = list(xs)
+    random.shuffle(ys)
+    ylen = len(ys)
+    size = int(ylen / n)
+    chunks = [ys[0+size*i : size*(i+1)] for i in range(n)]
+
+    leftover = ylen - size*n
+    edge = size*n
+    for i in range(leftover):
+            chunks[i%n].append(ys[edge+i])
+
+    return chunks
+
+def layer_equal_division(model, args = None):
+
+    parameter_distribution = []
+    total_division = []
+
+    for para in model.parameters():
+        size = para.view(-1).shape[0]
+        parameter_distribution.append(size)
+    
+    for layer_size in parameter_distribution:
+        temp_set = set(range(layer_size))
+        temp_chunk_list = chunk(range(layer_size), args.num_corrupt)
+        for index in range(len(temp_chunk_list)):
+            temp_chunk_list[index] = list(temp_set - set(temp_chunk_list[index]))
+        total_division.append(temp_chunk_list)
+
+    return total_division
+
 def get_grad(model):
     temp_list = []
 
@@ -210,7 +243,7 @@ def grad_zero_topk(model, topk_list, threshold = 0):
         count += 1
     return
     
-def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2, if_random = False):
+def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2, args = None, equal_division = None, id = None):
     mali_layer_list = []
     parameter_distribution = [0]
     total = 0
@@ -223,8 +256,11 @@ def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2, if_rand
     for layer in range(len(parameter_distribution) - 1):
         temp_layer = mali_update[parameter_distribution[layer]:parameter_distribution[layer + 1]]
         #base_number = parameter_distribution[layer]
-        if if_random:
+        if args.random_topk:
             temp_list = np.random.choice(len(temp_layer), math.floor(len(temp_layer) * topk_ratio), replace=False).tolist()
+        elif args.equal_division:
+            temp_list = equal_division[layer][id]
+
         else:
             topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio))
             temp_list = topk_object.indices.tolist()
@@ -356,6 +392,7 @@ def print_exp_details(args, record = None):
     print(f'    topk_mode: {args.topk_mode}')
     print(f'    topk_fraction: {args.topk_fraction}')
     print(f'    random_topk: {args.random_topk}')
+    print(f'    equal_division: {args.equal_division}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -390,6 +427,7 @@ def print_exp_details(args, record = None):
         record.append(f'    topk_mode: {args.topk_mode}')
         record.append(f'    topk_fraction: {args.topk_fraction}')
         record.append(f'    random_topk: {args.random_topk}')
+        record.append(f'    equal_division: {args.equal_division}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):

@@ -7,6 +7,9 @@ def boolean_string(s):
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--equal_division', type = boolean_string, default=False,
+                        help="equally divide every layer")
+
     parser.add_argument('--random_topk', type = boolean_string, default=False,
                         help="if random topk")
 

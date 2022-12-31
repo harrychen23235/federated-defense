@@ -21,33 +21,36 @@ torch.backends.cudnn.benchmark = True
 
 if __name__ == '__main__':
     #os.chdir('E://Desktop//report//security//federated-defense//federated_learning')
-    
-    args = args_parser()
     '''
+    args = args_parser()
+    args.equal_division = True
+    args.random_topk = False
+    args.topk_mode = True
+    args.topk_fraction = 0.02
     args.seperate_vector = False
     #args.norm_cap = 10
-    args.data = 'reddit'
-    args.num_agents=1
+    args.data = 'mnist'
+    args.num_agents=10
     args.rounds=200
     args.partition = 'homo'
-    #args.load_pretrained = False 
-    #args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
+    args.load_pretrained = True
+    args.pretrained_path = '..//data//saved_models//mnist_pretrain//model_last.pt.tar.epoch_10'
     #args.pretrained_path = '..//data//saved_models//cifar_pretrain//model_last.pt.tar.epoch_200'
     args.attack_mode = 'normal'
-    args.num_corrupt = 0
+    args.num_corrupt = 4
     args.malicious_style='mixed'
     args.attack_start_round = 0
-    args.storing_dir = './pattern_size_2'
+    args.storing_dir = './temp'
     #args.pattern_type = "size_test"
     #args.pattern_size = 10
     #args.alpha = 0.5
     #args.poison_epoch = 5
     args.poison_lr = 0.05
     args.client_lr = 0.1
-    args.poison_frac = 0.1
+    args.poison_frac = 0.2
     args.generator_lr = 0.1
     #args.seperate_vector = True
-    args.bs = 20
+    args.bs = 256
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
@@ -119,7 +122,10 @@ if __name__ == '__main__':
     n_model_params = len(parameters_to_vector(global_model.parameters()))
     aggregator = Aggregation(agent_data_sizes, n_model_params, args, writer)
     criterion = nn.CrossEntropyLoss().to(args.device)
-
+    if args.equal_division:
+        temp_division = functions.layer_equal_division(global_model, args)
+    else:
+        temp_division = None
     # training loop
     for rnd in tqdm(range(1, args.rounds+1)):
         if args.restrain_lr and rnd % 10 == 0:
@@ -128,7 +134,8 @@ if __name__ == '__main__':
         agent_updates_dict = {}
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
             if args.data != 'reddit':
-                update = agents[agent_id].local_train(global_model, criterion, rnd, [trigger_model_using, trigger_model_target, trigger_vector_using, trigger_vector_target])
+                update = agents[agent_id].local_train(global_model, criterion, rnd, 
+                trigger_model = [trigger_model_using, trigger_model_target, trigger_vector_using, trigger_vector_target], equal_division = temp_division)
             else:
                 sampling = random.sample(range(len(data_dict['train_data'])), args.num_agents)
                 update = agents[agent_id].local_reddit_train(global_model, criterion, rnd, data_dict, sampling)
