@@ -21,8 +21,9 @@ torch.backends.cudnn.benchmark = True
 
 if __name__ == '__main__':
     #os.chdir('E://Desktop//report//security//federated-defense//federated_learning')
-    '''
+    
     args = args_parser()
+    '''
     args.equal_division = True
     args.random_topk = False
     args.topk_mode = True
