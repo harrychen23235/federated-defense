@@ -141,8 +141,9 @@ if __name__ == '__main__':
                 sampling = random.sample(range(len(data_dict['train_data'])), args.num_agents)
                 update = agents[agent_id].local_reddit_train(global_model, criterion, rnd, data_dict, sampling)
             if rnd >= args.attack_start_round and args.save_checkpoint == True:
-                if args.only_save_mali and agent_id < args.num_corrupt:
-                    torch.save(update, os.path.join(args.storing_dir, 'round_{}_agent_{}_update.pt'.format(rnd, agent_id)))
+                if args.only_save_mali:
+                    if agent_id < args.num_corrupt:
+                        torch.save(update, os.path.join(args.storing_dir, 'round_{}_agent_{}_update.pt'.format(rnd, agent_id)))
                 else:
                     torch.save(update, os.path.join(args.storing_dir, 'round_{}_agent_{}_update.pt'.format(rnd, agent_id)))
 
