@@ -7,6 +7,9 @@ def boolean_string(s):
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--only_save_mali', type = boolean_string, default=False,
+                        help="only save malicious")
+
     parser.add_argument('--equal_division', type = boolean_string, default=False,
                         help="equally divide every layer")
 

@@ -393,6 +393,7 @@ def print_exp_details(args, record = None):
     print(f'    topk_fraction: {args.topk_fraction}')
     print(f'    random_topk: {args.random_topk}')
     print(f'    equal_division: {args.equal_division}')
+    print(f'    only_save_mali: {args.only_save_mali}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -428,6 +429,7 @@ def print_exp_details(args, record = None):
         record.append(f'    topk_fraction: {args.topk_fraction}')
         record.append(f'    random_topk: {args.random_topk}')
         record.append(f'    equal_division: {args.equal_division}')
+        record.append(f'    only_save_mali: {args.only_save_mali}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
