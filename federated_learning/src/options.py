@@ -25,22 +25,22 @@ def args_parser():
     parser.add_argument('--save_model_gap', type=int, default=None,
                         help="x gap to save the model")
 
-    parser.add_argument('--save_model', type=bool, default=False,
+    parser.add_argument('--save_model', type=boolean_string, default=False,
                         help="save model or not")
 
     parser.add_argument('--norm_cap', type=float, default=None,
                         help="norm clip for vector")
 
-    parser.add_argument('--seperate_vector', type=bool, default=False,
+    parser.add_argument('--seperate_vector', type=boolean_string, default=False,
                         help="each agent has his own pattern vector")
 
-    parser.add_argument('--underwater_attacker', type=bool, default=False,
+    parser.add_argument('--underwater_attacker', type=boolean_string, default=False,
                         help="attacker not join aggregation round")
 
-    parser.add_argument('--save_checkpoint', type=bool, default=False,
+    parser.add_argument('--save_checkpoint', type=boolean_string, default=False,
                         help="save checkpoint when attacking")
 
-    parser.add_argument('--save_trigger', type=bool, default=False,
+    parser.add_argument('--save_trigger', type=boolean_string, default=False,
                         help="save trigger in each round")
 
     parser.add_argument('--load_pretrained', type = boolean_string, default=False,
@@ -55,7 +55,7 @@ def args_parser():
     parser.add_argument('--pretrained_path', type=str, default=None,
                         help="file of pretrained checkpoint")
 
-    parser.add_argument('--restrain_lr', type=bool, default=False,
+    parser.add_argument('--restrain_lr', type=boolean_string, default=False,
                         help="if set to true, half learning rate per 10 rounds")
 
     parser.add_argument('--attack_model', type=str, default=None,
@@ -125,7 +125,7 @@ def args_parser():
     parser.add_argument('--poison_epoch', type=int, default=6,
                         help="number of posion epoch")
 
-    parser.add_argument('--step_lr', type=bool, default=True,
+    parser.add_argument('--step_lr', type=boolean_string, default=True,
                         help="use scheduler to reduce learning rate")
 
     parser.add_argument('--bs', type=int, default=256,
