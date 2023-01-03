@@ -124,6 +124,8 @@ class Aggregation():
             weights[_id] = update.cpu().detach().numpy()  # np.array
         # grad_in = weights.tolist()  #list
         benign_id = flame(weights, cluster_sel=0)
+        print('!!!FLAME: remained ids are:')
+        print(benign_id)
         accepted_models_dict = {}
         for i in range(len(benign_id)):
             accepted_models_dict[i] = torch.tensor(weights[benign_id[i], :]).to(self.args.device)
