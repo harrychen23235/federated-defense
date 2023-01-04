@@ -24,6 +24,7 @@ if __name__ == '__main__':
     
     args = args_parser()
     '''
+    args.equal_division_for_one = True
     args.equal_division = True
     args.random_topk = False
     args.topk_mode = True
@@ -52,6 +53,7 @@ if __name__ == '__main__':
     args.generator_lr = 0.1
     #args.seperate_vector = True
     args.bs = 256
+    args.clip = 1.5
     #args.aggr = 'krum'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
@@ -124,7 +126,7 @@ if __name__ == '__main__':
     aggregator = Aggregation(agent_data_sizes, n_model_params, args, writer)
     criterion = nn.CrossEntropyLoss().to(args.device)
     if args.equal_division:
-        temp_division = functions.layer_equal_division(global_model, args)
+        temp_division,raw_divided_part = functions.layer_equal_division(global_model, args)
     else:
         temp_division = None
     # training loop
@@ -152,6 +154,16 @@ if __name__ == '__main__':
             # make sure every agent gets same copy of the global model in a round (i.e., they don't affect each other's training)
             vector_to_parameters(copy.deepcopy(rnd_global_params), global_model.parameters())
         # aggregate params obtained by agents and update the global params
+
+        if args.equal_division_for_one:
+            update_for_zero = torch.zeros((len(agent_updates_dict[0]))).double().to(args.device)
+            for mali_index in range(0, args.num_corrupt):
+                update_for_zero[raw_divided_part[mali_index]] = agent_updates_dict[mali_index][raw_divided_part[mali_index]]
+            agent_updates_dict[0] = update_for_zero
+            for mali_index in range(1, args.num_corrupt):
+                agent_updates_dict.pop(mali_index, None)
+
+
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
         
         if rnd >= args.attack_start_round and args.save_trigger ==  True and args.attack_mode == 'fixed_generator':

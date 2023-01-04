@@ -27,6 +27,10 @@ class Aggregation():
 
         if self.args.clip != 0:
             self.clip_updates(agent_updates_dict)
+
+        for key in agent_updates_dict.keys():
+            print('norm of current update_{} is'.format(key))
+            print(torch.norm(agent_updates_dict[key], p = 2))
             
         if self.args.aggr=='avg':          
             aggregated_updates = self.agg_avg(agent_updates_dict)

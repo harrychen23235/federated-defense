@@ -29,19 +29,38 @@ def layer_equal_division(model, args = None):
 
     parameter_distribution = []
     total_division = []
+    raw_divided_part = []
 
     for para in model.parameters():
         size = para.view(-1).shape[0]
         parameter_distribution.append(size)
     
+    count = 0
     for layer_size in parameter_distribution:
         temp_set = set(range(layer_size))
         temp_chunk_list = chunk(range(layer_size), args.num_corrupt)
+        
+        copied_temp_chunk_list = copy.deepcopy(temp_chunk_list)
+        for agent_index in range(len(copied_temp_chunk_list)):
+            for para_index in range(len(copied_temp_chunk_list[agent_index])):
+                copied_temp_chunk_list[agent_index][para_index] = copied_temp_chunk_list[agent_index][para_index] + count
+
+        raw_divided_part.append(copy.deepcopy(copied_temp_chunk_list))
         for index in range(len(temp_chunk_list)):
             temp_chunk_list[index] = list(temp_set - set(temp_chunk_list[index]))
-        total_division.append(temp_chunk_list)
 
-    return total_division
+        total_division.append(temp_chunk_list)
+        count += layer_size
+    
+    final_divided_part = []
+    for index in range(args.num_corrupt):
+        final_divided_part.append([])
+
+    for layer_index in range(len(raw_divided_part)):
+        for agent_index in range(len(raw_divided_part[layer_index])):
+            final_divided_part[agent_index].extend(raw_divided_part[layer_index][agent_index]) 
+
+    return total_division, final_divided_part
 
 def get_grad(model):
     temp_list = []
@@ -395,6 +414,7 @@ def print_exp_details(args, record = None):
     print(f'    equal_division: {args.equal_division}')
     print(f'    only_save_mali: {args.only_save_mali}')
     print(f'    attack_start_round: {args.attack_start_round}')
+    print(f'    equal_division_for_one: {args.equal_division_for_one}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -432,6 +452,7 @@ def print_exp_details(args, record = None):
         record.append(f'    equal_division: {args.equal_division}')
         record.append(f'    only_save_mali: {args.only_save_mali}')
         record.append(f'    attack_start_round: {args.attack_start_round}')
+        record.append(f'    equal_division_for_one: {args.equal_division_for_one}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
