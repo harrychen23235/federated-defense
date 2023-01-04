@@ -7,6 +7,12 @@ def boolean_string(s):
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--single_equal_division', type = boolean_string, default=False,
+                        help="every mali agent divide parameter k times, and train on them")
+
+    parser.add_argument('--same_as_first', type = boolean_string, default=False,
+                        help="every mali_agent repeat para of first mali agent")
+
     parser.add_argument('--equal_division_for_one', type = boolean_string, default=False,
                         help="one mali agent gather all equal division and update")
 

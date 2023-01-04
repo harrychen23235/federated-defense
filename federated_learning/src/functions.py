@@ -415,6 +415,8 @@ def print_exp_details(args, record = None):
     print(f'    only_save_mali: {args.only_save_mali}')
     print(f'    attack_start_round: {args.attack_start_round}')
     print(f'    equal_division_for_one: {args.equal_division_for_one}')
+    print(f'    single_equal_division: {args.single_equal_division}')
+    print(f'    same_as_first: {args.same_as_first}')    
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -453,6 +455,8 @@ def print_exp_details(args, record = None):
         record.append(f'    only_save_mali: {args.only_save_mali}')
         record.append(f'    attack_start_round: {args.attack_start_round}')
         record.append(f'    equal_division_for_one: {args.equal_division_for_one}')
+        record.append(f'    single_equal_division: {args.single_equal_division}')
+        record.append(f'    same_as_first: {args.same_as_first}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):

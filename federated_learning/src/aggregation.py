@@ -15,7 +15,7 @@ class Aggregation():
 
         self.cum_net_mov = 0
         
-         
+    
     def aggregate_updates(self, global_model, agent_updates_dict, cur_round):
         # adjust LR if robust LR is selected
         lr_vector = torch.Tensor([self.server_lr]*self.n_params).to(self.args.device)
@@ -27,11 +27,17 @@ class Aggregation():
 
         if self.args.clip != 0:
             self.clip_updates(agent_updates_dict)
-
+        
+        if self.args.same_as_first and self.args.num_corrupt > 0:
+            first_update = agent_updates_dict[0]
+            for index in range(1, self.args.num_corrupt):
+                agent_updates_dict[index] = deepcopy(first_update)
+            
+        '''
         for key in agent_updates_dict.keys():
             print('norm of current update_{} is'.format(key))
             print(torch.norm(agent_updates_dict[key], p = 2))
-            
+        '''
         if self.args.aggr=='avg':          
             aggregated_updates = self.agg_avg(agent_updates_dict)
         elif self.args.aggr=='comed':

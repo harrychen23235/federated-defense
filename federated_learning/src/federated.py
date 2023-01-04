@@ -24,15 +24,17 @@ if __name__ == '__main__':
     
     args = args_parser()
     '''
-    args.equal_division_for_one = True
-    args.equal_division = True
+    args.same_as_first = False
+    args.single_equal_division = True
+    args.equal_division_for_one = False
+    args.equal_division =True
     args.random_topk = False
-    args.topk_mode = True
+    args.topk_mode = False
     args.topk_fraction = 0.02
     args.seperate_vector = False
     #args.norm_cap = 10
     args.data = 'mnist'
-    args.num_agents=10
+    args.num_agents= 30
     args.rounds=200
     args.partition = 'homo'
     args.load_pretrained = True
@@ -54,7 +56,7 @@ if __name__ == '__main__':
     #args.seperate_vector = True
     args.bs = 256
     args.clip = 1.5
-    #args.aggr = 'krum'
+    args.aggr = 'flame'
     #args.poison_mode = 'all2one'
     #args.pattern_type = 'vertical_line'
     #args.noise_total_epoch = 2
@@ -138,7 +140,7 @@ if __name__ == '__main__':
         for agent_id in np.random.choice(args.num_agents, math.floor(args.num_agents*args.agent_frac), replace=False):
             if args.data != 'reddit':
                 update = agents[agent_id].local_train(global_model, criterion, rnd, 
-                trigger_model = [trigger_model_using, trigger_model_target, trigger_vector_using, trigger_vector_target], equal_division = temp_division)
+                trigger_model = [trigger_model_using, trigger_model_target, trigger_vector_using, trigger_vector_target], equal_division = temp_division, raw_divided_part = raw_divided_part)
             else:
                 sampling = random.sample(range(len(data_dict['train_data'])), args.num_agents)
                 update = agents[agent_id].local_reddit_train(global_model, criterion, rnd, data_dict, sampling)
@@ -161,7 +163,8 @@ if __name__ == '__main__':
                 update_for_zero[raw_divided_part[mali_index]] = agent_updates_dict[mali_index][raw_divided_part[mali_index]]
             agent_updates_dict[0] = update_for_zero
             for mali_index in range(1, args.num_corrupt):
-                agent_updates_dict.pop(mali_index, None)
+                agent_updates_dict[mali_index] = copy.deepcopy(update_for_zero)
+                #agent_updates_dict.pop(mali_index, None)
 
 
         aggregator.aggregate_updates(global_model, agent_updates_dict, rnd)
