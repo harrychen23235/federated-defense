@@ -127,6 +127,7 @@ if __name__ == '__main__':
     n_model_params = len(parameters_to_vector(global_model.parameters()))
     aggregator = Aggregation(agent_data_sizes, n_model_params, args, writer)
     criterion = nn.CrossEntropyLoss().to(args.device)
+    raw_divided_part = None
     if args.equal_division:
         temp_division,raw_divided_part = functions.layer_equal_division(global_model, args)
     else:
