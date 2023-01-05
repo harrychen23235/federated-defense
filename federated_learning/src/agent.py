@@ -312,7 +312,9 @@ class Agent():
         """ Do a local training over the received global model, return the update """
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
         global_model.train()
-        mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
+        mali_update = None
+        if not self.args.equal_division:
+            mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
         topk_list = functions.get_topk(global_model, mali_update, benign_update = None, topk_ratio = self.args.topk_fraction, args = self.args, equal_division = equal_division, id = self.id)
         #functions.para_set_grad_topk(global_model, topk_list, if_grad = False)
         torch.save(topk_list, os.path.join(self.args.storing_dir, 'topk_rnd_{}_agent_{}.pt'.format(rnd, self.id)))
@@ -380,12 +382,14 @@ class Agent():
         initial_global_model_params = parameters_to_vector(global_model.parameters()).detach()
         final_update = torch.zeros((len(initial_global_model_params))).double().to(self.args.device)
 
-        for training_rnd in range(self.args.num_corrupt):
+        for training_rnd in range(self.args.divided_part):
+            #print('current training rnd is')
+            #print(training_rnd)
             vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
             global_model.train()
-            mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
+            #mali_update = self.local_common_train(global_model, criterion, malicious_mode = True)
 
-            topk_list = functions.get_topk(global_model, mali_update, benign_update = None, topk_ratio = self.args.topk_fraction, args = self.args, equal_division = equal_division, id = training_rnd)
+            topk_list = functions.get_topk(global_model, mali_update = None, benign_update = None, topk_ratio = self.args.topk_fraction, args = self.args, equal_division = equal_division, id = training_rnd)
             #functions.para_set_grad_topk(global_model, topk_list, if_grad = False)
             #torch.save(topk_list, os.path.join(self.args.storing_dir, 'topk_rnd_{}_agent_{}.pt'.format(rnd, self.id)))
             vector_to_parameters(copy.deepcopy(initial_global_model_params), global_model.parameters())
@@ -446,6 +450,11 @@ class Agent():
             with torch.no_grad():
                 update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
             final_update[raw_divided_part[training_rnd]] = update[raw_divided_part[training_rnd]]
-        return final_update
+        self.local_common_train(global_model, criterion, malicious_mode = True)
+        with torch.no_grad():
+            update = parameters_to_vector(global_model.parameters()).double() - initial_global_model_params
+            return update
+
+        #return final_update
 
             

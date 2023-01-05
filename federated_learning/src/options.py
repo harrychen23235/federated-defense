@@ -7,6 +7,9 @@ def boolean_string(s):
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--divided_part', type = int, default=4,
+                        help="for single equal division")
+
     parser.add_argument('--single_equal_division', type = boolean_string, default=False,
                         help="every mali agent divide parameter k times, and train on them")
 

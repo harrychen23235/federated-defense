@@ -25,7 +25,7 @@ def chunk(xs, n):
 
     return chunks
 
-def layer_equal_division(model, args = None):
+def layer_equal_division(model, single_equal_division, args = None):
 
     parameter_distribution = []
     total_division = []
@@ -38,7 +38,7 @@ def layer_equal_division(model, args = None):
     count = 0
     for layer_size in parameter_distribution:
         temp_set = set(range(layer_size))
-        temp_chunk_list = chunk(range(layer_size), args.num_corrupt)
+        temp_chunk_list = chunk(range(layer_size), single_equal_division)
         
         copied_temp_chunk_list = copy.deepcopy(temp_chunk_list)
         for agent_index in range(len(copied_temp_chunk_list)):
@@ -53,7 +53,7 @@ def layer_equal_division(model, args = None):
         count += layer_size
     
     final_divided_part = []
-    for index in range(args.num_corrupt):
+    for index in range(single_equal_division):
         final_divided_part.append([])
 
     for layer_index in range(len(raw_divided_part)):
@@ -268,12 +268,13 @@ def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2, args = 
     total = 0
 
     for para in model.parameters():
-        size = para.grad.view(-1).shape[0]
+        size = para.view(-1).shape[0]
         total += size
         parameter_distribution.append(total)
     
     for layer in range(len(parameter_distribution) - 1):
-        temp_layer = mali_update[parameter_distribution[layer]:parameter_distribution[layer + 1]]
+        if not args.equal_division:
+            temp_layer = mali_update[parameter_distribution[layer]:parameter_distribution[layer + 1]]
         #base_number = parameter_distribution[layer]
         if args.random_topk:
             temp_list = np.random.choice(len(temp_layer), math.floor(len(temp_layer) * topk_ratio), replace=False).tolist()
@@ -416,7 +417,8 @@ def print_exp_details(args, record = None):
     print(f'    attack_start_round: {args.attack_start_round}')
     print(f'    equal_division_for_one: {args.equal_division_for_one}')
     print(f'    single_equal_division: {args.single_equal_division}')
-    print(f'    same_as_first: {args.same_as_first}')    
+    print(f'    same_as_first: {args.same_as_first}')
+    print(f'    divided_part: {args.divided_part}')  
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -457,6 +459,7 @@ def print_exp_details(args, record = None):
         record.append(f'    equal_division_for_one: {args.equal_division_for_one}')
         record.append(f'    single_equal_division: {args.single_equal_division}')
         record.append(f'    same_as_first: {args.same_as_first}')
+        record.append(f'    divided_part: {args.divided_part}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
