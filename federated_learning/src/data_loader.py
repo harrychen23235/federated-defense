@@ -512,7 +512,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
     logo_path = "../watermark.png"
     original_shape = x.shape
     x = x.squeeze()
-    if dataset == 'mnist':
+    if dataset == 'mnist' or dataset == 'fmnist':
         trigger_value = 1
     else:
         trigger_value = 0
