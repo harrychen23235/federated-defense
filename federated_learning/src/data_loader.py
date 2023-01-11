@@ -395,7 +395,7 @@ def get_classification_model(args):
     elif args.data == 'cifar10':
         local_model = ResNet18(name='Local').to(args.device)
 
-    elif args.data == 'mnist':
+    elif args.data == 'mnist' or args.data == 'fmnist':
         local_model = MnistNet(name='Local').to(args.device)
 
     elif args.data == 'fedemnist':
@@ -439,7 +439,7 @@ def get_image_parameter(args):
         args.input_channel = 3
         args.num_classes = 10
 
-    elif args.data == "mnist":
+    elif args.data == "mnist" or args.data == 'fmnist':
         args.input_height = 28
         args.input_width = 28
         args.input_channel = 1
@@ -464,7 +464,7 @@ def get_noise_generator(args):
     if args.data == 'cifar10':
         noise_model = UNet(3).to(args.device)
 
-    elif args.data == 'mnist' or args.data == 'fedemnist':
+    elif args.data == 'mnist' or args.data == 'fedemnist' or args.data == 'fmnist':
         noise_model = MNISTAutoencoder().to(args.device)
 
     elif args.data =='tiny-imagenet':
@@ -551,7 +551,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                     for i in range(location[0], location[0] + 3):
                         for j in range(location[1],location[1] + 3):
                             x[d][i][j] = trigger_value 
-        elif dataset == 'mnist' or dataset == 'fedemnist':
+        elif dataset == 'mnist' or dataset == 'fedemnist' or dataset == 'fmnist':
             if pattern_type == 'square':
                 for i in range(21, 26):
                     for j in range(21, 26):
@@ -640,7 +640,7 @@ def add_pattern_bd(x, dataset='cifar10', pattern_type='square', agent_idx=-1, mo
                             pos = pattern_type[i][j]
                             x[d][pos[0]][pos[1]] = trigger_value
 
-        elif dataset == 'mnist' or dataset == 'fedemnist':
+        elif dataset == 'mnist' or dataset == 'fedemnist' or dataset == 'fmnist':
             if pattern_type == 'pixel':
                     pattern_type = [[[0, 0], [0, 1], [0, 2], [0, 3]],
                     [[0, 6], [0, 7], [0, 8], [0, 9]],
