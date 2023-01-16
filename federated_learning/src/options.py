@@ -7,6 +7,9 @@ def boolean_string(s):
 
 def args_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--mask_big_topk', type = boolean_string, default=True,
+                        help="mask big topk or small topk")
+
     parser.add_argument('--divided_part', type = int, default=4,
                         help="for single equal division")
 
@@ -85,7 +88,7 @@ def args_parser():
                         help="homo, noniid_labeldir, iid-diff-quantity, real")
 
     parser.add_argument('--attack_mode', type=str, default='None',
-                        help="DBA, trigger_generation, normal, fixed_generator")
+                        help="DBA, trigger_generation, normal, fixed_generator, two_step_trigger_generation")
 
     parser.add_argument('--clsmodel', type=str, default=None,
                         help="vgg11, PreActResNet18, ResNet18, ResNet18TinyImagenet")

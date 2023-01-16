@@ -282,7 +282,7 @@ def get_topk(model, mali_update, benign_update = None, topk_ratio = 0.2, args = 
             temp_list = equal_division[layer][id]
 
         else:
-            topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio))
+            topk_object = torch.topk(temp_layer, math.floor(len(temp_layer) * topk_ratio), largest = args.mask_big_topk)
             temp_list = topk_object.indices.tolist()
         #temp_list = [i + base_number for i in temp_list]
         mali_layer_list.append(temp_list)
@@ -418,7 +418,8 @@ def print_exp_details(args, record = None):
     print(f'    equal_division_for_one: {args.equal_division_for_one}')
     print(f'    single_equal_division: {args.single_equal_division}')
     print(f'    same_as_first: {args.same_as_first}')
-    print(f'    divided_part: {args.divided_part}')  
+    print(f'    divided_part: {args.divided_part}')
+    print(f'    mask_big_topk: {args.mask_big_topk}')
     print('======================================')
     if record != None:
         record.append('======================================')
@@ -460,6 +461,7 @@ def print_exp_details(args, record = None):
         record.append(f'    single_equal_division: {args.single_equal_division}')
         record.append(f'    same_as_first: {args.same_as_first}')
         record.append(f'    divided_part: {args.divided_part}')
+        record.append(f'    mask_big_topk: {args.mask_big_topk}')
         record.append(f'======================================')
         
 def print_distribution(user_groups, num_classes, train_dataset):
